@@ -1,34 +1,56 @@
 <template>
   <div class="page">
     <div class="header">
-      <h2>我的任务</h2>
-      <button class="link" @click="logout">退出登录</button>
+      <div>
+        <h2>我的任务</h2>
+        <p class="stat" v-if="todos.length">
+          共 {{ todos.length }} 项 · {{ doneCount }} 已完成
+        </p>
+      </div>
+      <button class="logout" @click="logout">退出登录</button>
     </div>
 
-    <form class="add-form" @submit.prevent="add">
-      <input v-model.trim="newTitle" placeholder="新任务标题" />
-      <button type="submit" :disabled="!newTitle">添加</button>
-    </form>
+    <div class="card">
+      <form class="add-form" @submit.prevent="add">
+        <input v-model.trim="newTitle" placeholder="添加新任务，回车确认…" />
+        <button type="submit" :disabled="!newTitle">添加</button>
+      </form>
 
-    <div class="filters">
-      <label v-for="opt in ['all', 'active', 'done']" :key="opt">
-        <input type="radio" :value="opt" v-model="filter" /> {{ { all: '全部', active: '未完成', done: '已完成' }[opt] }}
-      </label>
+      <div class="filters">
+        <button
+          v-for="opt in ['all', 'active', 'done']"
+          :key="opt"
+          :class="{ active: filter === opt }"
+          @click="filter = opt"
+        >{{ { all: '全部', active: '未完成', done: '已完成' }[opt] }}</button>
+      </div>
+
+      <p v-if="error" class="error">{{ error }}</p>
+      <p v-if="!loading && !filtered.length" class="empty">
+        {{ filter === 'all' ? '还没有任务，添加一个吧' : '这个分类下暂无任务' }}
+      </p>
+
+      <transition-group name="list" tag="ul" class="todo-list">
+        <li v-for="todo in filtered" :key="todo.id" :class="{ done: todo.completed }">
+          <button class="check" :title="todo.completed ? '标记为未完成' : '标记为完成'" @click="toggle(todo)">
+            <svg v-if="todo.completed" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+          </button>
+          <span v-if="editingId !== todo.id" class="title" @dblclick="startEdit(todo)">{{ todo.title }}</span>
+          <input
+            v-else
+            v-model.trim="editTitle"
+            class="edit"
+            v-focus
+            @keyup.enter="saveEdit(todo)"
+            @keyup.esc="cancelEdit"
+            @blur="saveEdit(todo)"
+          />
+          <button class="del" title="删除任务" @click="remove(todo)">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>
+          </button>
+        </li>
+      </transition-group>
     </div>
-
-    <p v-if="error" class="error">{{ error }}</p>
-    <p v-if="!loading && !filtered.length" class="empty">暂无任务</p>
-
-    <ul class="todo-list">
-      <li v-for="todo in filtered" :key="todo.id" :class="{ done: todo.completed }">
-        <input type="checkbox" :checked="todo.completed" @change="toggle(todo)" />
-        <span class="title" @dblclick="startEdit(todo)">{{ todo.title }}</span>
-        <template v-if="editingId === todo.id">
-          <input v-model.trim="editTitle" class="edit" @keyup.enter="saveEdit(todo)" @keyup.esc="cancelEdit" @blur="saveEdit(todo)" />
-        </template>
-        <button class="del" @click="remove(todo)">删除</button>
-      </li>
-    </ul>
   </div>
 </template>
 
@@ -46,11 +68,15 @@ const error = ref('')
 const editingId = ref(null)
 const editTitle = ref('')
 
+const vFocus = { mounted: (el) => el.focus() }
+
 const filtered = computed(() => {
   if (filter.value === 'active') return todos.value.filter(t => !t.completed)
   if (filter.value === 'done') return todos.value.filter(t => t.completed)
   return todos.value
 })
+
+const doneCount = computed(() => todos.value.filter(t => t.completed).length)
 
 async function load() {
   loading.value = true
@@ -123,20 +149,139 @@ onMounted(load)
 </script>
 
 <style scoped>
-.page { max-width: 560px; margin: 40px auto; padding: 0 16px; }
-.header { display: flex; justify-content: space-between; align-items: center; }
-.header h2 { margin: 0; }
-.link { background: none; border: none; color: #4098ff; cursor: pointer; }
-.add-form { display: flex; gap: 8px; margin: 16px 0; }
-.add-form input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-.add-form button { padding: 10px 18px; border: none; border-radius: 6px; background: #4098ff; color: #fff; cursor: pointer; }
-.filters { display: flex; gap: 16px; font-size: 14px; margin-bottom: 12px; }
+.page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #ffffff 0%, #f2f4ff 100%);
+  padding: 32px 20px;
+  box-sizing: border-box;
+}
+.page > * { max-width: 620px; margin-left: auto; margin-right: auto; }
+
+.header { display: flex; justify-content: space-between; align-items: flex-start; color: #1d1d1f; margin-bottom: 24px; }
+.header h2 { margin: 0; font-size: 26px; font-weight: 600; }
+.stat { margin: 6px 0 0; font-size: 13px; color: #86868b; }
+.logout {
+  padding: 8px 16px;
+  border: 1px solid #d1d1d6;
+  background: #ffffff;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #6e6e73;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.logout:hover { background: #f0f0f3; color: #007aff; }
+
+.card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+.add-form { display: flex; gap: 10px; margin-bottom: 16px; }
+.add-form input {
+  flex: 1;
+  padding: 12px 14px;
+  border: 1px solid #e5e5ea;
+  border-radius: 12px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.add-form input:focus {
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
+}
+.add-form button {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #007aff, #5ac8fa);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.add-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.filters { display: flex; gap: 8px; margin-bottom: 16px; }
+.filters button {
+  padding: 7px 16px;
+  border: 1px solid #e5e5ea;
+  background: #ffffff;
+  border-radius: 999px;
+  font-size: 14px;
+  color: #86868b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.filters button.active {
+  background: #007aff;
+  border-color: #007aff;
+  color: #ffffff;
+}
+
 .todo-list { list-style: none; padding: 0; margin: 0; }
-.todo-list li { display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid #eee; }
-.todo-list li.done .title { text-decoration: line-through; color: #999; }
-.title { flex: 1; cursor: pointer; }
-.edit { flex: 1; padding: 6px; border: 1px solid #4098ff; border-radius: 4px; }
-.del { background: none; border: 1px solid #e5484d; color: #e5484d; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
-.error { color: #e5484d; }
-.empty { color: #999; text-align: center; }
+.todo-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px;
+  border-bottom: 1px solid #f0f0f3;
+  border-radius: 12px;
+  transition: background 0.15s;
+}
+.todo-list li:hover { background: #f7f8fb; }
+.todo-list li:last-child { border-bottom: none; }
+
+.check {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: 2px solid #d1d1d6;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  padding: 0;
+  transition: all 0.2s;
+}
+li.done .check { background: linear-gradient(135deg, #007aff, #5ac8fa); border-color: transparent; }
+
+.title { flex: 1; cursor: pointer; font-size: 15px; color: #1d1d1f; word-break: break-all; }
+li.done .title { text-decoration: line-through; color: #b0b0b5; }
+
+.edit {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #007aff;
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12);
+}
+
+.del {
+  background: none;
+  border: none;
+  color: #c7c7cc;
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  transition: color 0.2s, background 0.2s;
+}
+.todo-list li:hover .del { color: #ff3b30; }
+.del:hover { background: #fff0f0; }
+
+.error { color: #ff3b30; font-size: 13px; margin: 8px 0 0; }
+.empty { color: #86868b; text-align: center; padding: 32px 0 16px; margin: 0; font-size: 14px; }
+
+.list-enter-active, .list-leave-active { transition: all 0.25s ease; }
+.list-enter-from, .list-leave-to { opacity: 0; transform: translateX(-12px); }
 </style>

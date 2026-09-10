@@ -1,0 +1,57 @@
+:root {
+  /* Brand palette: soft violet-indigo */
+  --todo-violet-50: #f5f3ff;
+  --todo-violet-100: #ede9fe;
+  --todo-violet-200: #ddd6fe;
+  --todo-violet-300: #c4b5fd;
+  --todo-violet-400: #a78bfa;
+  --todo-violet-500: #8b5cf6;
+  --todo-violet-600: #7c3aed;
+  --todo-violet-700: #6d28d9;
+  --todo-violet-800: #5b21b6;
+  --todo-violet-900: #4c1d95;
+
+  --todo-indigo-500: #6366f1;
+  --todo-indigo-600: #4f46e5;
+
+  /* Surfaces */
+  --todo-background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  --todo-foreground: #1f2937;
+  --todo-muted: #f3f4f6;
+  --todo-muted-foreground: #6b7280;
+
+  /* Card / popover */
+  --todo-card: #ffffff;
+  --todo-card-foreground: #1f2937;
+  --todo-popover: #ffffff;
+  --todo-popover-foreground: #1f2937;
+
+  /* Primary action */
+  --todo-primary: #7c3aed;
+  --todo-primary-foreground: #ffffff;
+
+  /* Borders / inputs */
+  --todo-border: #e5e7eb;
+  --todo-input: #f9fafb;
+  --todo-ring: #8b5cf6;
+
+  /* State colors */
+  --todo-state-success: #10b981;
+  --todo-state-warning: #f59e0b;
+  --todo-state-error: #ef4444;
+  --todo-state-info: #3b82f6;
+
+  /* Radius */
+  --todo-radius-sm: 4px;
+  --todo-radius-md: 8px;
+  --todo-radius-lg: 16px;
+  --todo-radius-pill: 999px;
+
+  /* Typography */
+  --todo-font-sans: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --todo-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+body {
+  font-family: var(--todo-font-sans);
+}

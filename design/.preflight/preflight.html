@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preflight</title>
+    <style id="theme-vars">
+:root {
+  /* Brand palette: soft violet-indigo */
+  --todo-violet-50: #f5f3ff;
+  --todo-violet-100: #ede9fe;
+  --todo-violet-200: #ddd6fe;
+  --todo-violet-300: #c4b5fd;
+  --todo-violet-400: #a78bfa;
+  --todo-violet-500: #8b5cf6;
+  --todo-violet-600: #7c3aed;
+  --todo-violet-700: #6d28d9;
+  --todo-violet-800: #5b21b6;
+  --todo-violet-900: #4c1d95;
+
+  --todo-indigo-500: #6366f1;
+  --todo-indigo-600: #4f46e5;
+
+  /* Surfaces */
+  --todo-background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  --todo-foreground: #1f2937;
+  --todo-muted: #f3f4f6;
+  --todo-muted-foreground: #6b7280;
+
+  /* Card / popover */
+  --todo-card: #ffffff;
+  --todo-card-foreground: #1f2937;
+  --todo-popover: #ffffff;
+  --todo-popover-foreground: #1f2937;
+
+  /* Primary action */
+  --todo-primary: #7c3aed;
+  --todo-primary-foreground: #ffffff;
+
+  /* Borders / inputs */
+  --todo-border: #e5e7eb;
+  --todo-input: #f9fafb;
+  --todo-ring: #8b5cf6;
+
+  /* State colors */
+  --todo-state-success: #10b981;
+  --todo-state-warning: #f59e0b;
+  --todo-state-error: #ef4444;
+  --todo-state-info: #3b82f6;
+
+  /* Radius */
+  --todo-radius-sm: 4px;
+  --todo-radius-md: 8px;
+  --todo-radius-lg: 16px;
+  --todo-radius-pill: 999px;
+
+  /* Typography */
+  --todo-font-sans: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --todo-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+body {
+  font-family: var(--todo-font-sans);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--todo-background);
+    --color-foreground: var(--todo-foreground);
+    --color-card: var(--todo-card);
+    --color-card-foreground: var(--todo-card-foreground);
+    --color-popover: var(--todo-popover);
+    --color-popover-foreground: var(--todo-popover-foreground);
+    --color-primary: var(--todo-primary);
+    --color-primary-foreground: var(--todo-primary-foreground);
+    --color-muted: var(--todo-muted);
+    --color-muted-foreground: var(--todo-muted-foreground);
+    --color-border: var(--todo-border);
+    --color-input: var(--todo-input);
+    --color-ring: var(--todo-ring);
+    --radius-sm: var(--todo-radius-sm);
+    --radius-md: var(--todo-radius-md);
+    --radius-lg: var(--todo-radius-lg);
+  }
+  @layer base {
+    body { background: var(--todo-background); color: var(--todo-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--todo-background); }
+      .text-background { color: var(--todo-background); }
+      .border-background { border-color: var(--todo-background); }
+      .ring-background { --tw-ring-color: var(--todo-background); }
+      .bg-foreground { background-color: var(--todo-foreground); }
+      .text-foreground { color: var(--todo-foreground); }
+      .border-foreground { border-color: var(--todo-foreground); }
+      .ring-foreground { --tw-ring-color: var(--todo-foreground); }
+      .bg-card { background-color: var(--todo-card); }
+      .text-card { color: var(--todo-card); }
+      .border-card { border-color: var(--todo-card); }
+      .ring-card { --tw-ring-color: var(--todo-card); }
+      .bg-card-foreground { background-color: var(--todo-card-foreground); }
+      .text-card-foreground { color: var(--todo-card-foreground); }
+      .border-card-foreground { border-color: var(--todo-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--todo-card-foreground); }
+      .bg-popover { background-color: var(--todo-popover); }
+      .text-popover { color: var(--todo-popover); }
+      .border-popover { border-color: var(--todo-popover); }
+      .ring-popover { --tw-ring-color: var(--todo-popover); }
+      .bg-popover-foreground { background-color: var(--todo-popover-foreground); }
+      .text-popover-foreground { color: var(--todo-popover-foreground); }
+      .border-popover-foreground { border-color: var(--todo-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--todo-popover-foreground); }
+      .bg-primary { background-color: var(--todo-primary); }
+      .text-primary { color: var(--todo-primary); }
+      .border-primary { border-color: var(--todo-primary); }
+      .ring-primary { --tw-ring-color: var(--todo-primary); }
+      .bg-primary-foreground { background-color: var(--todo-primary-foreground); }
+      .text-primary-foreground { color: var(--todo-primary-foreground); }
+      .border-primary-foreground { border-color: var(--todo-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--todo-primary-foreground); }
+      .bg-muted { background-color: var(--todo-muted); }
+      .text-muted { color: var(--todo-muted); }
+      .border-muted { border-color: var(--todo-muted); }
+      .ring-muted { --tw-ring-color: var(--todo-muted); }
+      .bg-muted-foreground { background-color: var(--todo-muted-foreground); }
+      .text-muted-foreground { color: var(--todo-muted-foreground); }
+      .border-muted-foreground { border-color: var(--todo-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--todo-muted-foreground); }
+      .bg-border { background-color: var(--todo-border); }
+      .text-border { color: var(--todo-border); }
+      .border-border { border-color: var(--todo-border); }
+      .ring-border { --tw-ring-color: var(--todo-border); }
+      .bg-input { background-color: var(--todo-input); }
+      .text-input { color: var(--todo-input); }
+      .border-input { border-color: var(--todo-input); }
+      .ring-input { --tw-ring-color: var(--todo-input); }
+      .bg-ring { background-color: var(--todo-ring); }
+      .text-ring { color: var(--todo-ring); }
+      .border-ring { border-color: var(--todo-ring); }
+      .ring-ring { --tw-ring-color: var(--todo-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>
