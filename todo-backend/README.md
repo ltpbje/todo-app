@@ -15,7 +15,7 @@
 2. 执行建表脚本 `schema.sql`，初始化 `todo_db` 数据库及 `users`、`todos` 表（含索引）：
 
    ```powershell
-   D:\Atools\mysql\bin\mysql.exe -u root --port=3306 < schema.sql
+   D:\Atools\MySQL\bin\mysql.exe -u root --port=3306 < schema.sql
    ```
 
 3. 确认连接配置：数据库名 `todo_db`，用户 `root`，密码为空。

@@ -384,6 +384,38 @@ html.dark .glass-overlay { background: rgba(0, 0, 0, 0.5); }
 }
 .glass-glossy:hover::after { opacity: 1; }
 
+/* ---------- theme switch circular reveal (View Transitions API) ---------- */
+/* origin set via --vt-x/--vt-y from App.vue: dark expands from top-right,
+   light from bottom-left */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+  animation: theme-dim 0.9s ease both;
+}
+::view-transition-new(root) {
+  z-index: 2;
+  animation: theme-reveal 0.9s cubic-bezier(0.62, 0.05, 0.25, 1) both;
+}
+/* old theme dims and desaturates under the reveal for depth */
+@keyframes theme-dim {
+  to { opacity: 0.45; filter: saturate(0.6); }
+}
+/* new theme expands in a circle while settling from a slight zoom */
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0px at var(--vt-x, 100%) var(--vt-y, 0%));
+    transform: scale(1.06);
+  }
+  to {
+    clip-path: circle(140% at var(--vt-x, 100%) var(--vt-y, 0%));
+    transform: scale(1);
+  }
+}
+
 /* ---------- performance / compatibility ---------- */
 /* mobile: lower blur radius (cheaper compositing) */
 @media (pointer: coarse), (max-width: 768px) {

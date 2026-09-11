@@ -12,8 +12,11 @@
       <div class="glass-card" v-glass-glow>
         <div class="glare glass-glare"></div>
         <form class="add-form" @submit.prevent="add">
-          <input v-model.trim="newTitle" class="glass-input" placeholder="添加新任务，回车确认…" />
-          <button type="submit" class="glass-button glass-glossy" v-glass-glow :disabled="!newTitle">添加</button>
+          <input v-model.trim="newTitle" class="glass-input" placeholder="添加新任务，回车确认…" :disabled="adding" />
+          <button type="submit" class="glass-button glass-glossy" v-glass-glow :disabled="!newTitle || adding">
+            <span v-if="adding" class="spinner"></span>
+            {{ adding ? '添加中' : '添加' }}
+          </button>
         </form>
 
         <div class="filters">
@@ -46,8 +49,9 @@
               @keyup.esc="cancelEdit"
               @blur="saveEdit(todo)"
             />
-            <button class="del" title="删除任务" @click="remove(todo)">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>
+            <button class="del" title="删除任务" :disabled="deletingId === todo.id" @click="remove(todo)">
+              <span v-if="deletingId === todo.id" class="spinner spinner-dark"></span>
+              <svg v-else viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>
             </button>
           </li>
         </transition-group>
@@ -66,6 +70,8 @@ const todos = ref([])
 const newTitle = ref('')
 const filter = ref('all')
 const loading = ref(true)
+const adding = ref(false)
+const deletingId = ref(null)
 const error = ref('')
 const editingId = ref(null)
 const editTitle = ref('')
@@ -93,13 +99,16 @@ async function load() {
 }
 
 async function add() {
-  if (!newTitle.value) return
+  if (!newTitle.value || adding.value) return
+  adding.value = true
   try {
     const { data } = await api.post('/todos', { title: newTitle.value, completed: false })
     todos.value.unshift(data)
     newTitle.value = ''
   } catch (e) {
     error.value = e.response?.data?.message || '添加失败'
+  } finally {
+    adding.value = false
   }
 }
 
@@ -113,11 +122,15 @@ async function toggle(todo) {
 }
 
 async function remove(todo) {
+  if (deletingId.value) return
+  deletingId.value = todo.id
   try {
     await api.delete(`/todos/${todo.id}`)
     todos.value = todos.value.filter(t => t.id !== todo.id)
   } catch (e) {
     error.value = '删除失败'
+  } finally {
+    deletingId.value = null
   }
 }
 
@@ -174,6 +187,23 @@ onMounted(load)
 .add-form { display: flex; gap: 10px; margin-bottom: 16px; position: relative; }
 .add-form .glass-input { flex: 1; }
 
+.spinner {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+  vertical-align: -2px;
+  margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* darker spinner for the delete button (icon-colored, not white) */
+.spinner-dark { border-color: rgba(93, 93, 120, 0.25); border-top-color: currentColor; }
+
 .filters { display: flex; gap: 8px; margin-bottom: 16px; position: relative; }
 
 .todo-list { list-style: none; padding: 0; margin: 0; position: relative; }
@@ -210,7 +240,7 @@ li.done .check {
   box-shadow: 0 3px 10px rgba(110, 120, 255, 0.4);
 }
 
-.title { flex: 1; cursor: pointer; font-size: 15px; color: var(--text-primary); word-break: break-all; }
+.title { flex: 1; cursor: pointer; font-size: 15px; color: var(--text-primary); word-break: break-all; transition: color 0.25s; }
 li.done .title { text-decoration: line-through; color: var(--text-secondary); }
 
 .edit { flex: 1; padding: 8px 10px; }
@@ -232,6 +262,9 @@ li.done .title { text-decoration: line-through; color: var(--text-secondary); }
 .error { color: var(--danger); font-size: 13px; margin: 8px 0 0; position: relative; }
 .empty { color: var(--text-secondary); text-align: center; padding: 32px 0 16px; margin: 0; font-size: 14px; position: relative; }
 
-.list-enter-active, .list-leave-active { transition: all 0.25s ease; }
+/* higher specificity than `.todo-list li` which sets `transition: background` */
+.todo-list li.list-enter-active, .todo-list li.list-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
 .list-enter-from, .list-leave-to { opacity: 0; transform: translateX(-12px); }
+.list-leave-active { position: absolute; width: 100%; }
+.list-move { transition: transform 0.25s ease; }
 </style>

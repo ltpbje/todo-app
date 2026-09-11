@@ -20,9 +20,22 @@ import { onMounted, onUnmounted, ref } from 'vue'
 const isDark = ref(document.documentElement.classList.contains('dark'))
 
 function toggleTheme() {
-  isDark.value = !isDark.value
-  document.documentElement.classList.toggle('dark', isDark.value)
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
+  const nextDark = !isDark.value
+  const root = document.documentElement
+  const apply = () => {
+    root.classList.toggle('dark', nextDark)
+    localStorage.setItem('theme', nextDark ? 'dark' : 'light')
+    isDark.value = nextDark
+  }
+  // reveal origin: dark sweeps in from top-right, light from bottom-left
+  root.style.setProperty('--vt-x', nextDark ? '100%' : '0%')
+  root.style.setProperty('--vt-y', nextDark ? '0%' : '100%')
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (document.startViewTransition && !reduced) {
+    document.startViewTransition(apply)
+  } else {
+    apply()
+  }
 }
 
 // keep in sync if user changes OS theme while page is open
