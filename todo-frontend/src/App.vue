@@ -1,4 +1,7 @@
 <template>
+  <div class="molten-bg" aria-hidden="true">
+    <MoltenMetal :speed="0.3" :mouse-strength="0.25" />
+  </div>
   <button
     class="glass-button theme-toggle glass-glossy"
     :title="isDark ? '切换到浅色模式' : '切换到深色模式'"
@@ -16,6 +19,7 @@
 
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
+import MoltenMetal from './components/MoltenMetal.vue'
 
 const isDark = ref(document.documentElement.classList.contains('dark'))
 
@@ -51,6 +55,17 @@ onUnmounted(() => mq.removeEventListener('change', onSystemChange))
 </script>
 
 <style>
+/* MoltenMetal background wrapper: fixed full-viewport, behind everything */
+.molten-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+html.dark .molten-bg {
+  opacity: 0.5;
+}
+
 .theme-toggle {
   position: fixed;
   top: 16px;
