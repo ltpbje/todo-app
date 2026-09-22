@@ -5,3 +5,5 @@ target/
 *.iml
 .env
 .mysql-data/
+.workbuddy/
+design/

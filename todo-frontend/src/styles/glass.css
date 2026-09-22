@@ -4,37 +4,45 @@
 
 /* ---------- Step 1: design tokens (light theme default) ---------- */
 :root {
-  --glass-bg: rgba(255, 255, 255, 0.08);
-  --glass-bg-strong: rgba(255, 255, 255, 0.34);
-  --glass-bg-hover: rgba(255, 255, 255, 0.52);
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  /* controls read as GLASS: near-clear fill + a crisp lit edge.
+     A fat white fill is exactly what turns them into frosted bars. */
+  --glass-bg-strong: rgba(255, 255, 255, 0.2);
+  --glass-bg-hover: rgba(255, 255, 255, 0.36);
+  /* opaque stand-in used only to mask Chrome's autofill paint */
+  --glass-fill-solid: #f4f5fc;
   --glass-sheen: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.28) 0%,
-    rgba(255, 255, 255, 0.04) 40%,
-    rgba(255, 255, 255, 0.01) 60%,
-    rgba(255, 255, 255, 0.12) 100%
+    rgba(255, 255, 255, 0.17) 0%,
+    rgba(255, 255, 255, 0.04) 24%,
+    rgba(255, 255, 255, 0) 42%,
+    rgba(255, 255, 255, 0) 74%,
+    rgba(255, 255, 255, 0.08) 100%
   );
-  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.5);
   /* specular rim: bright where light enters, faint on the far edge */
   --glass-rim: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(255, 255, 255, 0.15) 35%,
-    rgba(255, 255, 255, 0.08) 60%,
-    rgba(255, 255, 255, 0.55) 100%
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(255, 255, 255, 0.12) 32%,
+    rgba(255, 255, 255, 0.06) 58%,
+    rgba(255, 255, 255, 0.5) 100%
   );
-  --glass-shadow: 0 10px 36px rgba(31, 38, 135, 0.18);
-  --glass-shadow-hover: 0 18px 52px rgba(31, 38, 135, 0.26);
-  /* lens effect: interior is brighter & more vivid than the background */
-  --glass-refraction: blur(10px) saturate(180%) brightness(1.14);
-  /* glass thickness at the edge: bright inner ring + shading on the far side */
+  --glass-shadow: 0 12px 40px rgba(31, 38, 135, 0.2), 0 2px 6px rgba(31, 38, 135, 0.08);
+  --glass-shadow-hover: 0 20px 56px rgba(31, 38, 135, 0.28), 0 3px 10px rgba(31, 38, 135, 0.1);
+  /* the PANE stays clear — blur here is what reads as "frosted", so keep it tiny */
+  --glass-refraction: blur(1.5px) saturate(185%) brightness(1.0);
   --glass-lens:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
-    inset 2px 6px 14px rgba(255, 255, 255, 0.5),
-    inset -8px -10px 24px rgba(31, 38, 135, 0.1);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.5),
+    inset -6px -10px 26px rgba(31, 38, 135, 0.1);
   --glass-highlight:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.85),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.25);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.16);
+  /* recessed well for inputs: inputs are carved INTO the glass, buttons sit on top */
+  --glass-well:
+    inset 0 2px 5px rgba(31, 38, 135, 0.08),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.6);
   --glass-blur: 44px;
   --glass-blur-soft: 14px;
   --glass-radius: 28px;
@@ -48,38 +56,42 @@
   --accent-grad: linear-gradient(135deg, rgba(90, 130, 255, 0.92), rgba(160, 100, 255, 0.92));
   --accent-ring: 0 0 0 4px rgba(110, 130, 255, 0.18);
   --danger: #e0344b;
-  --glow-color: rgba(255, 255, 255, 0.45);
+  --glow-color: rgba(255, 255, 255, 0.3);
   --page-bg: linear-gradient(160deg, #c7dbff 0%, #e6d4ff 40%, #ffd4e8 75%, #ffe9d6 100%);
 }
 
 /* dark theme — same tokens, tuned contrast */
 html.dark {
-  --glass-bg: rgba(24, 26, 42, 0.22);
-  --glass-bg-strong: rgba(38, 41, 63, 0.72);
-  --glass-bg-hover: rgba(52, 56, 86, 0.88);
+  --glass-bg: rgba(24, 26, 42, 0.12);
+  --glass-bg-strong: rgba(38, 41, 63, 0.4);
+  --glass-bg-hover: rgba(52, 56, 86, 0.58);
+  --glass-fill-solid: #24273c;
   --glass-sheen: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0.03) 35%,
-    rgba(255, 255, 255, 0.01) 55%,
-    rgba(255, 255, 255, 0.07) 100%
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.015) 35%,
+    rgba(255, 255, 255, 0) 55%,
+    rgba(255, 255, 255, 0.03) 100%
   );
-  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-border: rgba(255, 255, 255, 0.2);
   --glass-rim: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.5) 0%,
-    rgba(255, 255, 255, 0.08) 35%,
-    rgba(255, 255, 255, 0.04) 60%,
-    rgba(255, 255, 255, 0.22) 100%
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(255, 255, 255, 0.09) 32%,
+    rgba(255, 255, 255, 0.04) 58%,
+    rgba(255, 255, 255, 0.24) 100%
   );
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
-  --glass-shadow-hover: 0 16px 48px rgba(0, 0, 0, 0.55);
-  --glass-refraction: blur(10px) saturate(195%) brightness(1.26);
+  --glass-shadow: 0 10px 36px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --glass-shadow-hover: 0 18px 52px rgba(0, 0, 0, 0.6), 0 3px 10px rgba(0, 0, 0, 0.35);
+  --glass-refraction: blur(1.5px) saturate(190%) brightness(1.04);
   --glass-lens:
     inset 0 0 0 1px rgba(255, 255, 255, 0.22),
-    inset 2px 6px 14px rgba(255, 255, 255, 0.12),
-    inset -8px -10px 24px rgba(0, 0, 0, 0.32);
-  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.24);
+    inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.16),
+    inset -6px -10px 26px rgba(0, 0, 0, 0.3);
+  --glass-highlight: inset 0 1.5px 0 rgba(255, 255, 255, 0.28);
+  --glass-well:
+    inset 0 2px 5px rgba(0, 0, 0, 0.35),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
   --text-primary: #eceaf6;
   --text-secondary: #b0afc6;
   --accent: #8a9dff;
@@ -143,7 +155,7 @@ html.dark body::after { background: radial-gradient(circle, rgba(200, 139, 255, 
   -webkit-backdrop-filter: var(--glass-refraction);
   backdrop-filter: var(--glass-refraction);
   border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  box-shadow: var(--glass-shadow), var(--glass-highlight), var(--glass-lens);
   transition:
     background var(--liquid-duration) ease,
     box-shadow var(--liquid-duration) var(--liquid-ease),
@@ -158,41 +170,46 @@ html.dark body::after { background: radial-gradient(circle, rgba(200, 139, 255, 
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 1.5px;
+  padding: 2px;
   background: var(--glass-rim);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
 }
 
-/* glass thickness: bright bevel where light enters, shading on the far edge */
-.glass-card::after,
-.glass-modal::after,
-.glass-panel::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: var(--glass-lens);
-  pointer-events: none;
-  z-index: 1;
-}
+/* LIQUID GLASS CORE — kept deliberately simple: one clear backdrop blur on the
+   pane + the gradient rim above. A masked "edge refraction" ring was tried here
+   and repeatedly painted a visible inner rectangle on high-contrast backgrounds
+   (MoltenMetal), so it is gone for good. */
 
-/* small controls: flat translucent, NO backdrop-filter (nested filters
-   inside a glass card cause edge artifacts and double blur) */
+/* small controls: same glass language as the cards — clear fill, crisp edge.
+   Raised surfaces (buttons, pills) get a lit top edge; inputs are recessed.
+   Still NO backdrop-filter (nested filters inside a glass card cause edge
+   artifacts and double blur). */
 .glass-button,
-.glass-input,
 .glass-tooltip {
   background: var(--glass-bg-strong);
   border: 1px solid var(--glass-border);
-  box-shadow: 0 2px 10px rgba(31, 38, 135, 0.08), var(--glass-highlight);
+  box-shadow:
+    0 2px 10px rgba(31, 38, 135, 0.08),
+    var(--glass-highlight),
+    var(--glass-lens);
   transition:
     background var(--liquid-duration) ease,
     box-shadow var(--liquid-duration) var(--liquid-ease),
     transform var(--liquid-duration) var(--liquid-ease);
+}
+
+.glass-input {
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-well);
+  transition:
+    background var(--liquid-duration) ease,
+    box-shadow var(--liquid-duration) var(--liquid-ease);
 }
 
 /* fallback when backdrop-filter is unsupported */
@@ -215,7 +232,7 @@ html.dark body::after { background: radial-gradient(circle, rgba(200, 139, 255, 
 }
 .glass-panel { border-radius: var(--glass-radius-sm); overflow: visible; }
 .glass-card:hover {
-  box-shadow: var(--glass-shadow-hover), var(--glass-highlight);
+  box-shadow: var(--glass-shadow-hover), var(--glass-highlight), var(--glass-lens);
 }
 
 /* button with liquid hover/active feedback */
@@ -230,7 +247,10 @@ html.dark body::after { background: radial-gradient(circle, rgba(200, 139, 255, 
 }
 .glass-button:hover:not(:disabled) {
   background: var(--glass-bg-hover);
-  box-shadow: 0 6px 20px rgba(31, 38, 135, 0.14), var(--glass-highlight);
+  box-shadow:
+    0 6px 20px rgba(31, 38, 135, 0.14),
+    var(--glass-highlight),
+    var(--glass-lens);
   transform: translateY(-1px);
 }
 .glass-button:active:not(:disabled) { transform: scale(0.97); }
@@ -264,7 +284,8 @@ html.dark .glass-button.accent { color: #fff; }
 .glass-input:-webkit-autofill:hover,
 .glass-input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--text-primary);
-  -webkit-box-shadow: 0 0 0 1000px var(--glass-bg-strong) inset;
+  /* must be fully opaque or Chrome's own autofill tint bleeds through */
+  -webkit-box-shadow: 0 0 0 1000px var(--glass-fill-solid) inset;
   caret-color: var(--text-primary);
   border-color: var(--glass-border);
 }
@@ -343,7 +364,10 @@ html.dark .glass-overlay { background: rgba(0, 0, 0, 0.5); }
   cursor: pointer;
   background: var(--glass-bg-strong);
   border: 1px solid var(--glass-border);
-  box-shadow: 0 2px 10px rgba(31, 38, 135, 0.08), var(--glass-highlight);
+  box-shadow:
+    0 2px 10px rgba(31, 38, 135, 0.08),
+    var(--glass-highlight),
+    var(--glass-lens);
   font-family: inherit;
   transition: all var(--liquid-duration) var(--liquid-ease);
 }
@@ -352,7 +376,7 @@ html.dark .glass-overlay { background: rgba(0, 0, 0, 0.5); }
   background: var(--accent-grad);
   border-color: rgba(255, 255, 255, 0.4);
   color: #fff;
-  box-shadow: 0 4px 14px rgba(110, 120, 255, 0.35);
+  box-shadow: 0 4px 14px rgba(110, 120, 255, 0.35), var(--glass-highlight);
 }
 
 /* ---------- mouse-follow glow ---------- */

@@ -1,6 +1,12 @@
 <template>
   <div class="molten-bg" aria-hidden="true">
-    <MoltenMetal :speed="0.3" :mouse-strength="0.25" />
+    <!--
+      `scale` is deliberately finer than the component default (4).
+      Liquid glass only reads as glass when there is structure behind it to
+      refract — over a featureless gradient every glass surface degenerates
+      into a flat pale sheet no matter how the card itself is styled.
+    -->
+    <MoltenMetal :speed="0.3" :mouse-strength="0.25" :scale="6.5" />
   </div>
   <button
     class="glass-button theme-toggle glass-glossy"

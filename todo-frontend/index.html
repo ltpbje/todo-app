@@ -11,6 +11,22 @@
 </head>
 <body>
   <div id="app"></div>
+  <!--
+    Liquid Glass edge refraction.
+    Chromium supports an SVG filter reference inside `backdrop-filter`, which is
+    the only way to get REAL light bending (displacement) rather than just blur.
+    A thin masked band on the card's rim samples this, so the background smears
+    and warps at the edge exactly like a thick lens — while the centre of the
+    pane stays clear enough to read text on. Kept out of the CSS bundle so it is
+    parsed once, before first paint.
+  -->
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <filter id="lg-edge-warp" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.0035 0.0035" numOctaves="3" seed="17" result="noise" />
+      <feGaussianBlur in="noise" stdDeviation="2.5" result="softNoise" />
+      <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="38" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </svg>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
