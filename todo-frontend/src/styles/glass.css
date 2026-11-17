@@ -1,15 +1,15 @@
 /* ============================================================
-   Liquid Glass — design tokens + global styles
+   液态玻璃 —— 设计令牌 + 全局样式
    ============================================================ */
 
-/* ---------- Step 1: design tokens (light theme default) ---------- */
+/* ---------- Step 1: 设计令牌（默认浅色主题） ---------- */
 :root {
   --glass-bg: rgba(255, 255, 255, 0.05);
-  /* controls read as GLASS: near-clear fill + a crisp lit edge.
-     A fat white fill is exactly what turns them into frosted bars. */
+  /* 控件要读起来像玻璃：近乎透明的填充 + 一道锐利的受光边缘。
+     厚重的白色填充恰恰会把它们变成磨砂条。 */
   --glass-bg-strong: rgba(255, 255, 255, 0.2);
   --glass-bg-hover: rgba(255, 255, 255, 0.36);
-  /* opaque stand-in used only to mask Chrome's autofill paint */
+  /* 仅用于遮盖 Chrome 自动填充底色的不透明替身 */
   --glass-fill-solid: #f4f5fc;
   --glass-sheen: linear-gradient(
     135deg,
@@ -20,7 +20,7 @@
     rgba(255, 255, 255, 0.05) 100%
   );
   --glass-border: rgba(255, 255, 255, 0.5);
-  /* specular rim: bright where light enters, faint on the far edge */
+  /* 镜面描边：光线进入处明亮，远端微弱 */
   --glass-rim: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.98) 0%,
@@ -30,10 +30,10 @@
   );
   --glass-shadow: 0 12px 40px rgba(31, 38, 135, 0.2), 0 2px 6px rgba(31, 38, 135, 0.08);
   --glass-shadow-hover: 0 20px 56px rgba(31, 38, 135, 0.28), 0 3px 10px rgba(31, 38, 135, 0.1);
-  /* the PANE stays clear — blur here is what reads as "frosted", so keep it tiny */
+  /* 玻璃面保持通透——这里的模糊正是"磨砂感"的来源，所以要极小 */
   --glass-refraction: blur(0.5px) saturate(230%);
-  /* thin-glass edge: crisp bright bevel in, tight shadow on the far side,
-     plus a soft inner halo where light concentrates along the rim */
+  /* 薄玻璃边缘：内侧是锐利的亮斜面，远端是收紧的暗影，
+     再加上光线沿边缘聚集形成的柔和内晕 */
   --glass-lens:
     inset 0 0 0 1px rgba(255, 255, 255, 0.5),
     inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.5),
@@ -41,7 +41,7 @@
   --glass-highlight:
     inset 0 1.5px 0 rgba(255, 255, 255, 0.75),
     inset 0 -1px 0 rgba(255, 255, 255, 0.16);
-  /* recessed well for inputs: inputs are carved INTO the glass, buttons sit on top */
+  /* 输入框的内凹槽：输入框是刻进玻璃里的，按钮则浮在其上 */
   --glass-well:
     inset 0 2px 5px rgba(31, 38, 135, 0.08),
     inset 0 -1px 0 rgba(255, 255, 255, 0.6);
@@ -62,7 +62,7 @@
   --page-bg: linear-gradient(160deg, #c7dbff 0%, #e6d4ff 40%, #ffd4e8 75%, #ffe9d6 100%);
 }
 
-/* dark theme — same tokens, tuned contrast */
+/* 深色主题——相同的令牌，调整对比度 */
 html.dark {
   --glass-bg: rgba(24, 26, 42, 0.05);
   --glass-bg-strong: rgba(38, 41, 63, 0.4);
@@ -104,7 +104,7 @@ html.dark {
   --page-bg: linear-gradient(160deg, #10121f 0%, #171228 45%, #1d1020 100%);
 }
 
-/* ---------- global background: layered radial glows + slow drift ---------- */
+/* ---------- 全局背景：分层的径向光晕 + 缓慢漂移 ---------- */
 * { box-sizing: border-box; }
 
 body {
@@ -116,7 +116,7 @@ body {
   transition: background 0.4s ease;
 }
 
-/* two drifting color blobs behind the glass layers */
+/* 玻璃层之后漂移的两个色块 */
 body::before,
 body::after {
   content: '';
@@ -146,8 +146,8 @@ html.dark body::after { background: radial-gradient(circle, rgba(200, 139, 255, 
   to { transform: translate(60px, 50px) scale(1.12); }
 }
 
-/* ---------- Step 2: glass utility classes ---------- */
-/* large surfaces: real refraction (backdrop-filter + sheen) */
+/* ---------- Step 2: 玻璃工具类 ---------- */
+/* 大面积表面：真正的折射（backdrop-filter + 光泽层） */
 .glass,
 .glass-card,
 .glass-panel,
@@ -165,7 +165,7 @@ html.dark body::after { background: radial-gradient(circle, rgba(200, 139, 255, 
     transform var(--liquid-duration) var(--liquid-ease);
 }
 
-/* gradient specular rim — replaces a flat border with a light-directed one */
+/* 渐变镜面描边——用受光方向的描边替代扁平的 border */
 .glass-card::before,
 .glass-modal::before,
 .glass-panel::before {
@@ -183,15 +183,13 @@ html.dark body::after { background: radial-gradient(circle, rgba(200, 139, 255, 
   z-index: 2;
 }
 
-/* LIQUID GLASS CORE — kept deliberately simple: one clear backdrop blur on the
-   pane + the gradient rim above. A masked "edge refraction" ring was tried here
-   and repeatedly painted a visible inner rectangle on high-contrast backgrounds
-   (MoltenMetal), so it is gone for good. */
+/* 液态玻璃核心——刻意保持简单：玻璃面上只有一层清晰背景模糊
+   + 上方的渐变描边。曾尝试过带遮罩的"边缘折射"环，但它在高对比背景
+   （MoltenMetal）上反复画出可见的矩形内框，所以已彻底移除。 */
 
-/* small controls: same glass language as the cards — clear fill, crisp edge.
-   Raised surfaces (buttons, pills) get a lit top edge; inputs are recessed.
-   Still NO backdrop-filter (nested filters inside a glass card cause edge
-   artifacts and double blur). */
+/* 小控件：与卡片同一套玻璃语言——通透填充 + 锐利边缘。
+   浮起表面（按钮、胶囊）带受光的上边缘；输入框则是内凹的。
+   依然不使用 backdrop-filter（玻璃卡片内的嵌套滤镜会产生边缘伪影和双重模糊）。 */
 .glass-button,
 .glass-tooltip {
   background: var(--glass-bg-strong);
@@ -215,7 +213,7 @@ html.dark body::after { background: radial-gradient(circle, rgba(200, 139, 255, 
     box-shadow var(--liquid-duration) var(--liquid-ease);
 }
 
-/* fallback when backdrop-filter is unsupported */
+/* 不支持 backdrop-filter 时的兜底 */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass,
   .glass-card,
@@ -226,7 +224,7 @@ html.dark body::after { background: radial-gradient(circle, rgba(200, 139, 255, 
   }
 }
 
-/* card / panel */
+/* 卡片 / 面板 */
 .glass-card,
 .glass-panel {
   border-radius: var(--glass-radius);
@@ -238,7 +236,7 @@ html.dark body::after { background: radial-gradient(circle, rgba(200, 139, 255, 
   box-shadow: var(--glass-shadow-hover), var(--glass-highlight), var(--glass-lens);
 }
 
-/* button with liquid hover/active feedback */
+/* 带液态悬停/按下反馈的按钮 */
 .glass-button {
   border-radius: var(--glass-radius-sm);
   padding: 10px 20px;
@@ -265,7 +263,7 @@ html.dark body::after { background: radial-gradient(circle, rgba(200, 139, 255, 
 }
 html.dark .glass-button.accent { color: #fff; }
 
-/* input */
+/* 输入框 */
 .glass-input {
   border-radius: var(--glass-radius-sm);
   padding: 12px 14px;
@@ -282,18 +280,18 @@ html.dark .glass-button.accent { color: #fff; }
   box-shadow: var(--accent-ring);
 }
 
-/* Chrome autofill paints inputs white regardless of theme — override it */
+/* Chrome 自动填充会把输入框涂白，不分主题——这里覆盖掉它 */
 .glass-input:-webkit-autofill,
 .glass-input:-webkit-autofill:hover,
 .glass-input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--text-primary);
-  /* must be fully opaque or Chrome's own autofill tint bleeds through */
+  /* 必须完全不透明，否则 Chrome 自带的填充色调会透出来 */
   -webkit-box-shadow: 0 0 0 1000px var(--glass-fill-solid) inset;
   caret-color: var(--text-primary);
   border-color: var(--glass-border);
 }
 
-/* fixed top navigation — blur strengthens on scroll */
+/* 固定顶部导航——滚动时模糊加强 */
 .glass-nav {
   position: fixed;
   top: 0;
@@ -320,7 +318,7 @@ html.dark .glass-button.accent { color: #fff; }
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18), var(--glass-highlight);
 }
 
-/* modal overlay + panel with enter animation */
+/* 模态遮罩层 + 带入场动画的面板 */
 .glass-overlay {
   position: fixed;
   inset: 0;
@@ -347,7 +345,7 @@ html.dark .glass-overlay { background: rgba(0, 0, 0, 0.5); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* tooltip / dropdown pill */
+/* 提示气泡 / 下拉胶囊 */
 .glass-tooltip {
   border-radius: 10px;
   padding: 8px 12px;
@@ -358,7 +356,7 @@ html.dark .glass-overlay { background: rgba(0, 0, 0, 0.5); }
   pointer-events: none;
 }
 
-/* pill (tabs / tags / filter chips) */
+/* 胶囊（标签页 / 标签 / 筛选块） */
 .glass-pill {
   padding: 7px 18px;
   border-radius: 999px;
@@ -382,11 +380,11 @@ html.dark .glass-overlay { background: rgba(0, 0, 0, 0.5); }
   box-shadow: 0 4px 14px rgba(110, 120, 255, 0.35), var(--glass-highlight);
 }
 
-/* ---------- mouse-follow glow ---------- */
-/* host tracks --gx/--gy (px) and --x/--y (%) via v-glass-glow directive */
+/* ---------- 鼠标跟随光泽 ---------- */
+/* 宿主元素通过 v-glass-glow 指令跟踪 --gx/--gy（px）和 --x/--y（%） */
 .glass-glow-host { position: relative; overflow: hidden; }
 
-/* large soft glare following the cursor across a surface */
+/* 跟随光标在表面上扫过的大片柔和光斑 */
 .glass-glare {
   position: absolute;
   inset: 0;
@@ -403,7 +401,7 @@ html.dark .glass-overlay { background: rgba(0, 0, 0, 0.5); }
 }
 .glass-glow-host:hover .glass-glare { opacity: 1; }
 
-/* small specular highlight following the cursor on buttons */
+/* 按钮上跟随光标的小块镜面高光 */
 .glass-glossy::after {
   content: '';
   position: absolute;
@@ -420,9 +418,9 @@ html.dark .glass-overlay { background: rgba(0, 0, 0, 0.5); }
 }
 .glass-glossy:hover::after { opacity: 1; }
 
-/* ---------- theme switch circular reveal (View Transitions API) ---------- */
-/* origin set via --vt-x/--vt-y from App.vue: dark expands from top-right,
-   light from bottom-left */
+/* ---------- 主题切换的圆形揭示（View Transitions API） ---------- */
+/* 起点由 App.vue 设置 --vt-x/--vt-y：深色从右上角扩散，
+   浅色从左下角 */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
@@ -436,11 +434,11 @@ html.dark .glass-overlay { background: rgba(0, 0, 0, 0.5); }
   z-index: 2;
   animation: theme-reveal 0.9s cubic-bezier(0.62, 0.05, 0.25, 1) both;
 }
-/* old theme dims and desaturates under the reveal for depth */
+/* 揭示过程中旧主题变暗并去饱和，以增强层次感 */
 @keyframes theme-dim {
   to { opacity: 0.45; filter: saturate(0.6); }
 }
-/* new theme expands in a circle while settling from a slight zoom */
+/* 新主题以圆形扩散展开，同时从轻微放大回落到常态 */
 @keyframes theme-reveal {
   from {
     clip-path: circle(0px at var(--vt-x, 100%) var(--vt-y, 0%));
@@ -452,14 +450,14 @@ html.dark .glass-overlay { background: rgba(0, 0, 0, 0.5); }
   }
 }
 
-/* ---------- performance / compatibility ---------- */
-/* mobile: lower blur radius (cheaper compositing) */
+/* ---------- 性能 / 兼容性 ---------- */
+/* 移动端：降低模糊半径（合成开销更小） */
 @media (pointer: coarse), (max-width: 768px) {
   :root { --glass-blur: 14px; --glass-blur-soft: 8px; }
   body::before, body::after { filter: blur(50px); }
 }
 
-/* reduced motion: stop drift animations */
+/* 减弱动效：停止漂移动画 */
 @media (prefers-reduced-motion: reduce) {
   body::before, body::after { animation: none; }
   *, *::before, *::after {

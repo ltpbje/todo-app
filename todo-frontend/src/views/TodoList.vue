@@ -19,6 +19,43 @@
           </button>
         </form>
 
+        <div class="ai-bar">
+          <button class="glass-pill" :class="{ active: aiPanel }" @click="aiPanel = !aiPanel">✨ AI 添加</button>
+          <input
+            v-model.trim="searchQ"
+            class="glass-input search-input"
+            placeholder="搜索任务（回车，AI 语义搜索）"
+            @keyup.enter="doSearch"
+            @input="onSearchInput"
+          />
+          <button v-if="searchResults" class="glass-pill" @click="clearSearch">清除搜索</button>
+        </div>
+
+        <div v-if="aiPanel" class="ai-panel">
+          <textarea
+            v-model.trim="nlText"
+            class="glass-input nl-input"
+            rows="2"
+            placeholder="用自然语言描述，例如：明天下午3点部门会议；周五前写完周报"
+          ></textarea>
+          <button class="glass-button accent" :disabled="!nlText || parsing" @click="parseNl">
+            <span v-if="parsing" class="spinner"></span>
+            {{ parsing ? '解析中' : '解析' }}
+          </button>
+          <p v-if="parseError" class="error">{{ parseError }}</p>
+          <div v-if="parsed.length" class="nl-preview">
+            <label v-for="(t, i) in parsed" :key="i" class="nl-task">
+              <input type="checkbox" v-model="t.checked" />
+              <span>{{ t.title }}</span>
+              <span v-if="t.dueDate" class="due">{{ t.dueDate }}</span>
+            </label>
+            <button class="glass-button accent" :disabled="!parsedCount || addingBatch" @click="addParsed">
+              <span v-if="addingBatch" class="spinner"></span>
+              添加选中（{{ parsedCount }}）
+            </button>
+          </div>
+        </div>
+
         <div class="filters">
           <button
             v-for="opt in ['all', 'active', 'done']"
@@ -27,6 +64,7 @@
             :class="{ active: filter === opt }"
             @click="filter = opt"
           >{{ { all: '全部', active: '未完成', done: '已完成' }[opt] }}</button>
+          <span v-if="searching" class="spinner"></span>
         </div>
 
         <p v-if="error" class="error">{{ error }}</p>
@@ -49,6 +87,9 @@
               @keyup.esc="cancelEdit"
               @blur="saveEdit(todo)"
             />
+            <button class="del" title="详情" @click="detailTodo = todo">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M9 13h6M9 17h6" /></svg>
+            </button>
             <button class="del" title="删除任务" :disabled="deletingId === todo.id" @click="remove(todo)">
               <span v-if="deletingId === todo.id" class="spinner spinner-dark"></span>
               <svg v-else viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>
@@ -56,6 +97,14 @@
           </li>
         </transition-group>
       </div>
+
+      <TodoDetailModal
+        v-if="detailTodo"
+        :todo="detailTodo"
+        @close="detailTodo = null"
+        @saved="onDetailSaved"
+        @saved-list="onSavedList"
+      />
     </div>
   </div>
 </template>
@@ -64,9 +113,75 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api/request'
+import { aiPost } from '../api/ai'
+import TodoDetailModal from '../components/TodoDetailModal.vue'
 
 const router = useRouter()
 const todos = ref([])
+const detailTodo = ref(null)
+
+function onDetailSaved(data) {
+  const idx = todos.value.findIndex(t => t.id === data.id)
+  if (idx !== -1) Object.assign(todos.value[idx], data)
+}
+function onSavedList(list) { todos.value.unshift(...list) }
+
+// --- AI：自然语言添加 ---
+const aiPanel = ref(false)
+const nlText = ref('')
+const parsed = ref([])
+const parsing = ref(false)
+const parseError = ref('')
+const addingBatch = ref(false)
+const parsedCount = computed(() => parsed.value.filter(t => t.checked).length)
+
+async function parseNl() {
+  parsing.value = true
+  parseError.value = ''
+  try {
+    const { tasks } = await aiPost('/ai/parse', { text: nlText.value })
+    parsed.value = (tasks || []).map(t => ({ ...t, checked: true }))
+    if (!parsed.value.length) parseError.value = '没有解析出任务，换个说法试试'
+  } catch (e) {
+    parseError.value = e.response?.data?.message || e.message || '解析失败'
+  } finally {
+    parsing.value = false
+  }
+}
+
+async function addParsed() {
+  addingBatch.value = true
+  try {
+    const items = parsed.value.filter(t => t.checked).map(t => ({ title: t.title, dueDate: t.dueDate, completed: false }))
+    const { data } = await api.post('/todos/batch', items)
+    todos.value.unshift(...data)
+    parsed.value = []
+    nlText.value = ''
+  } catch (e) {
+    parseError.value = e.response?.data?.message || '添加失败'
+  } finally {
+    addingBatch.value = false
+  }
+}
+
+// --- AI 语义搜索 ---
+const searchQ = ref('')
+const searchResults = ref(null)
+const searching = ref(false)
+
+async function doSearch() {
+  if (!searchQ.value) { searchResults.value = null; return }
+  searching.value = true
+  try {
+    searchResults.value = await aiPost('/ai/search', { q: searchQ.value })
+  } catch (e) {
+    error.value = e.response?.data?.message || e.message || '搜索失败'
+  } finally {
+    searching.value = false
+  }
+}
+function onSearchInput() { if (!searchQ.value) searchResults.value = null }
+function clearSearch() { searchQ.value = ''; searchResults.value = null }
 const newTitle = ref('')
 const filter = ref('all')
 const loading = ref(true)
@@ -79,6 +194,7 @@ const editTitle = ref('')
 const vFocus = { mounted: (el) => el.focus() }
 
 const filtered = computed(() => {
+  if (searchResults.value) return searchResults.value
   if (filter.value === 'active') return todos.value.filter(t => !t.completed)
   if (filter.value === 'done') return todos.value.filter(t => t.completed)
   return todos.value
@@ -148,7 +264,7 @@ async function saveEdit(todo) {
   editingId.value = null
   if (!editTitle.value || editTitle.value === todo.title) return
   try {
-    const { data } = await api.put(`/todos/${todo.id}`, { title: editTitle.value })
+    const { data } = await api.put(`/todos/${todo.id}`, { ...todo, title: editTitle.value })
     Object.assign(todo, data)
   } catch (e) {
     error.value = '更新失败'
@@ -201,10 +317,28 @@ onMounted(load)
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* darker spinner for the delete button (icon-colored, not white) */
+/* 删除按钮用的深色 spinner（跟随图标颜色，而非白色） */
 .spinner-dark { border-color: rgba(93, 93, 120, 0.25); border-top-color: currentColor; }
 
-.filters { display: flex; gap: 8px; margin-bottom: 16px; position: relative; }
+.filters { display: flex; gap: 8px; margin-bottom: 16px; position: relative; align-items: center; }
+
+.ai-bar { display: flex; gap: 8px; margin-bottom: 16px; position: relative; }
+.ai-bar .search-input { flex: 1; padding: 8px 12px; }
+
+.ai-panel {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius-sm);
+  background: var(--glass-bg);
+  padding: 14px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ai-panel .nl-input { width: 100%; resize: vertical; }
+.nl-preview { display: flex; flex-direction: column; gap: 6px; }
+.nl-task { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-primary); cursor: pointer; }
+.nl-task .due { margin-left: auto; font-size: 12px; color: var(--accent); }
 
 .todo-list { list-style: none; padding: 0; margin: 0; position: relative; }
 .todo-list li {
@@ -262,7 +396,7 @@ li.done .title { text-decoration: line-through; color: var(--text-secondary); }
 .error { color: var(--danger); font-size: 13px; margin: 8px 0 0; position: relative; }
 .empty { color: var(--text-secondary); text-align: center; padding: 32px 0 16px; margin: 0; font-size: 14px; position: relative; }
 
-/* higher specificity than `.todo-list li` which sets `transition: background` */
+/* 特异性高于 `.todo-list li`（后者设置了 `transition: background`） */
 .todo-list li.list-enter-active, .todo-list li.list-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
 .list-enter-from, .list-leave-to { opacity: 0; transform: translateX(-12px); }
 .list-leave-active { position: absolute; width: 100%; }

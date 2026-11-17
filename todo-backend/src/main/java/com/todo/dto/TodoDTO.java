@@ -10,7 +10,7 @@ public class TodoDTO {
     @Size(max = 200)
     private String title;
 
-    @Size(max = 2000)
+    @Size(max = 20000)
     private String description;
 
     private boolean completed;

@@ -17,7 +17,7 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /** ponytail: simple MVC-style filter registration instead of full Spring Security filter chain — sufficient for a JWT demo. */
+    /** ponytail: 用简单的 MVC 风格过滤器注册，而非完整的 Spring Security 过滤链——对 JWT 演示足够。 */
     @Bean
     public FilterRegistrationBean<JwtAuthFilter> jwtFilter(JwtAuthFilter filter) {
         FilterRegistrationBean<JwtAuthFilter> reg = new FilterRegistrationBean<>(filter);
@@ -34,6 +34,17 @@ public class SecurityConfig {
                 registry.addMapping("/api/**")
                         .allowedOrigins("*")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
+            }
+
+            /** 提供上传图片的访问。ponytail: 公开静态服务（无鉴权）——<img> 标签
+                无法携带 JWT 请求头；URL 是不可猜测的 UUID。若在意隐私，
+                升级方向是改用短时效签名 URL。 */
+            @Override
+            public void addResourceHandlers(org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry registry) {
+                // 结尾斜杠必不可少：Spring 会原样拼接 location + 文件名
+                String dir = java.nio.file.Path.of(System.getProperty("user.dir"), "uploads").toUri().toString();
+                if (!dir.endsWith("/")) dir += "/";
+                registry.addResourceHandler("/uploads/**").addResourceLocations(dir);
             }
         };
     }

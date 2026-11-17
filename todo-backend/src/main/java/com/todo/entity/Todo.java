@@ -19,6 +19,10 @@ public class Todo {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    /** 标题向量的 JSON 数组；为 null 表示未计算（回退到关键字搜索） */
+    @Column(name = "embedding", columnDefinition = "TEXT")
+    private String embedding;
+
     @Column(nullable = false)
     private boolean completed = false;
 
@@ -39,6 +43,8 @@ public class Todo {
     public void setTitle(String title) { this.title = title; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public String getEmbedding() { return embedding; }
+    public void setEmbedding(String embedding) { this.embedding = embedding; }
     public boolean isCompleted() { return completed; }
     public void setCompleted(boolean completed) { this.completed = completed; }
     public LocalDateTime getCreatedAt() { return createdAt; }

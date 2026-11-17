@@ -32,7 +32,7 @@ public class JwtUtil {
                 .compact();
     }
 
-    /** Returns userId or throws io.jsonwebtoken.JwtException on invalid/expired token. */
+    /** 返回 userId；token 无效或已过期时抛出 io.jsonwebtoken.JwtException。 */
     public Long parseUserId(String token) {
         Claims claims = Jwts.parserBuilder().setSigningKey(key).build()
                 .parseClaimsJws(token).getBody();

@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
   datasource:
     url: jdbc:mysql://localhost:3306/todo_db?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true
     username: root
@@ -13,6 +17,14 @@ jwt:
   # ponytail: demo-level secret; override via env var JWT_SECRET in production
   secret: ${JWT_SECRET:change-me-please-32-bytes-min-secret-key!!}
   expire-ms: 86400000
+
+# any OpenAI-compatible provider works (DeepSeek / Qwen / Moonshot / SiliconFlow / OpenAI)
+# set AI_API_KEY env var to enable AI features; without it everything degrades gracefully
+ai:
+  base-url: ${AI_BASE_URL:https://api.deepseek.com}
+  api-key: ${AI_API_KEY:}
+  chat-model: ${AI_CHAT_MODEL:deepseek-chat}
+  embed-model: ${AI_EMBED_MODEL:}   # e.g. text-embedding-3-small / BAAI/bge-m3; empty = keyword search only
 
 server:
   port: 8080

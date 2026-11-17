@@ -14,9 +14,11 @@ import java.util.List;
 public class TodoService {
 
     private final TodoRepository todoRepository;
+    private final AiService aiService;
 
-    public TodoService(TodoRepository todoRepository) {
+    public TodoService(TodoRepository todoRepository, AiService aiService) {
         this.todoRepository = todoRepository;
+        this.aiService = aiService;
     }
 
     public List<Todo> list(Boolean completed) {
@@ -31,7 +33,12 @@ public class TodoService {
         Todo todo = new Todo();
         todo.setUserId(CurrentUser.get());
         apply(todo, dto);
+        aiService.embedTodo(todo);
         return todoRepository.save(todo);
+    }
+
+    public List<Todo> createBatch(List<TodoDTO> dtos) {
+        return dtos.stream().map(this::create).toList();
     }
 
     public Todo update(Long id, TodoDTO dto) {
@@ -39,6 +46,7 @@ public class TodoService {
                 .filter(t -> t.getUserId().equals(CurrentUser.get()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Todo not found"));
         apply(todo, dto);
+        aiService.embedTodo(todo);   // title may have changed
         return todoRepository.save(todo);
     }
 

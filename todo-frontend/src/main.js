@@ -3,7 +3,7 @@ import App from './App.vue'
 import router from './router'
 import './styles/glass.css'
 
-// mouse-follow glow: updates --gx/--gy (px) and --x/--y (%) on the host element
+// 鼠标跟随光泽：在宿主元素上更新 --gx/--gy（px）和 --x/--y（%）
 const vGlassGlow = {
   mounted(el) {
     el.classList.add('glass-glow-host')

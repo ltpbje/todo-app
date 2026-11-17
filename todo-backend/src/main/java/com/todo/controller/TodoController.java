@@ -29,6 +29,12 @@ public class TodoController {
         return todoService.create(dto);
     }
 
+    /** 批量创建（供 AI 拆解 / 自然语言解析流程使用） */
+    @PostMapping("/batch")
+    public List<Todo> createBatch(@Valid @RequestBody List<TodoDTO> dtos) {
+        return todoService.createBatch(dtos);
+    }
+
     @PutMapping("/{id}")
     public Todo update(@PathVariable Long id, @Valid @RequestBody TodoDTO dto) {
         return todoService.update(id, dto);

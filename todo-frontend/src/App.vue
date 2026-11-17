@@ -1,10 +1,9 @@
 <template>
   <div class="molten-bg" aria-hidden="true">
     <!--
-      `scale` is deliberately finer than the component default (4).
-      Liquid glass only reads as glass when there is structure behind it to
-      refract — over a featureless gradient every glass surface degenerates
-      into a flat pale sheet no matter how the card itself is styled.
+      `scale` 特意比组件默认值（4）更细。
+      液态玻璃只有在背后有结构可供折射时才像玻璃——在毫无细节的渐变上，
+      无论卡片本身怎么调，玻璃面都会退化成一片扁平的白板。
     -->
     <MoltenMetal :speed="0.3" :mouse-strength="0.25" :scale="6.5" />
   </div>
@@ -37,7 +36,7 @@ function toggleTheme() {
     localStorage.setItem('theme', nextDark ? 'dark' : 'light')
     isDark.value = nextDark
   }
-  // reveal origin: dark sweeps in from top-right, light from bottom-left
+  // 揭示起点：深色从右上角扫入，浅色从左下角
   root.style.setProperty('--vt-x', nextDark ? '100%' : '0%')
   root.style.setProperty('--vt-y', nextDark ? '0%' : '100%')
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -48,7 +47,7 @@ function toggleTheme() {
   }
 }
 
-// keep in sync if user changes OS theme while page is open
+// 用户在使用中切换系统主题时保持同步
 const mq = window.matchMedia('(prefers-color-scheme: dark)')
 const onSystemChange = (e) => {
   if (!localStorage.getItem('theme')) {
@@ -61,7 +60,7 @@ onUnmounted(() => mq.removeEventListener('change', onSystemChange))
 </script>
 
 <style>
-/* MoltenMetal background wrapper: fixed full-viewport, behind everything */
+/* MoltenMetal 背景容器：固定铺满视口，位于所有内容之下 */
 .molten-bg {
   position: fixed;
   inset: 0;

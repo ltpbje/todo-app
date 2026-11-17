@@ -47,6 +47,19 @@ npm run dev
 
 浏览器打开 **http://localhost:5173**。`/api` 请求由 Vite 代理转发到后端 8080，无需关心跨域。
 
+### 后台启动（本次实际使用的命令，MySQL 已在运行时）
+
+```powershell
+# 后端（8080），日志写入临时目录
+Start-Process -FilePath 'cmd.exe' -ArgumentList @('/c','mvn spring-boot:run') -WorkingDirectory 'd:\Aproject\practice\todo-app\todo-backend' -RedirectStandardOutput "$env:TEMP\todo-backend.log" -RedirectStandardError "$env:TEMP\todo-backend.err" -WindowStyle Hidden -PassThru
+
+# 前端（5173），日志写入临时目录
+Start-Process -FilePath 'cmd.exe' -ArgumentList @('/c','npm run dev') -WorkingDirectory 'd:\Aproject\practice\todo-app\todo-frontend' -RedirectStandardOutput "$env:TEMP\todo-frontend.log" -RedirectStandardError "$env:TEMP\todo-frontend.err" -WindowStyle Hidden -PassThru
+
+# 等待约 20 秒后检查端口
+foreach ($p in 8080,5173) { Test-NetConnection localhost -Port $p -InformationLevel Quiet }
+```
+
 ## 测试账号
 
 - 用户名：`alice`

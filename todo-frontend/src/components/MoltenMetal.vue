@@ -127,7 +127,7 @@ void main() {
 
 const containerRef = ref(null)
 
-// mutable non-reactive state
+// 可变且非响应式的状态
 let program = null
 let teardown = null
 
@@ -242,8 +242,8 @@ onMounted(() => {
   const targetMouse = [0.5, 0.5]
   const currentMouse = [0.5, 0.5]
 
-  // listen on window so the drift works even though the canvas sits
-  // behind the page content (pointer-events: none)
+  // 在 window 上监听，这样即使 canvas 位于页面内容之后
+  // （pointer-events: none）也能响应漂移
   const handleMouseMove = (e) => {
     const rect = canvas.getBoundingClientRect()
     targetMouse[0] = (e.clientX - rect.left) / rect.width
@@ -307,7 +307,7 @@ onMounted(() => {
     try {
       container.removeChild(canvas)
     } catch {
-      /* canvas already detached */
+      /* canvas 已被移除 */
     }
     gl.getExtension('WEBGL_lose_context')?.loseContext()
   }
