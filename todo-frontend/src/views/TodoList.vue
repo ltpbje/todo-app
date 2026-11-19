@@ -9,7 +9,7 @@
         <button class="glass-button glass-glossy" v-glass-glow @click="logout">退出登录</button>
       </div>
 
-      <div class="glass-card" v-glass-glow>
+      <GlassObject class="glass-card" v-glass-glow>
         <div class="glare glass-glare"></div>
         <form class="add-form" @submit.prevent="add">
           <input v-model.trim="newTitle" class="glass-input" placeholder="添加新任务，回车确认…" :disabled="adding" />
@@ -96,7 +96,7 @@
             </button>
           </li>
         </transition-group>
-      </div>
+      </GlassObject>
 
       <TodoDetailModal
         v-if="detailTodo"
@@ -115,6 +115,7 @@ import { useRouter } from 'vue-router'
 import api from '../api/request'
 import { aiPost } from '../api/ai'
 import TodoDetailModal from '../components/TodoDetailModal.vue'
+import GlassObject from '../components/GlassObject.vue'
 
 const router = useRouter()
 const todos = ref([])

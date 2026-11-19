@@ -1,6 +1,6 @@
 <template>
   <div class="login-page">
-    <div class="login-card glass-card" v-glass-glow>
+    <GlassObject class="login-card glass-card" v-glass-glow>
       <div class="glare glass-glare"></div>
       <div class="logo">
         <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -30,7 +30,7 @@
         {{ loading ? '请稍候…' : (isRegister ? '注 册' : '登 录') }}
       </button>
       <a href="#" class="switch" @click.prevent="toggle">{{ isRegister ? '已有账号？去登录' : '没有账号？去注册' }}</a>
-    </div>
+    </GlassObject>
   </div>
 </template>
 
@@ -38,6 +38,7 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api/request'
+import GlassObject from '../components/GlassObject.vue'
 
 const router = useRouter()
 const isRegister = ref(false)
