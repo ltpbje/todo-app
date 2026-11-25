@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface TodoRepository extends JpaRepository<Todo, Long> {
-    List<Todo> findByUserIdOrderByCreatedAtDesc(Long userId);
-    List<Todo> findByUserIdAndCompletedOrderByCreatedAtDesc(Long userId, boolean completed);
+    List<Todo> findByUserIdOrderBySortOrderAscCreatedAtDesc(Long userId);
+    List<Todo> findByUserIdAndCompletedOrderBySortOrderAscCreatedAtDesc(Long userId, boolean completed);
 }

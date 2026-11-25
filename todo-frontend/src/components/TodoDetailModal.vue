@@ -8,6 +8,38 @@
         <button class="glass-button close-btn" @click="$emit('close')">✕</button>
       </div>
 
+      <div class="meta-grid">
+        <label>安排到
+          <DatePicker v-model="dueDate" />
+        </label>
+        <label>清单
+          <input v-model.trim="category" class="glass-input" list="modal-categories" placeholder="默认" />
+          <datalist id="modal-categories"><option v-for="c in categories" :key="c" :value="c" /></datalist>
+        </label>
+        <label>优先级
+          <SelectPicker v-model="priority" :options="priorityOptions" label="优先级" />
+        </label>
+        <label>重复
+          <SelectPicker v-model="repeatRule" :options="repeatOptions" label="重复" />
+        </label>
+        <label class="meta-wide">提醒时间
+          <input v-model="remindAt" type="datetime-local" class="glass-input" />
+        </label>
+      </div>
+
+      <div class="subtasks">
+        <div class="sub-head"><strong>子任务</strong><span>{{ doneSubs.length }} / {{ subs.length }}</span></div>
+        <label v-for="sub in subs" :key="sub.id" class="sub-task">
+          <input type="checkbox" :checked="sub.completed" @change="toggleSub(sub)" />
+          <span :class="{ done: sub.completed }">{{ sub.title }}</span>
+          <button type="button" class="sub-del" aria-label="删除子任务" @click="removeSub(sub)">×</button>
+        </label>
+        <form class="sub-add" @submit.prevent="addSub">
+          <input v-model.trim="subtaskTitle" class="glass-input" placeholder="添加子任务，回车确认" />
+          <button type="submit" class="glass-button" :disabled="!subtaskTitle">添加</button>
+        </form>
+      </div>
+
       <div class="toolbar">
         <span class="hint">点击任意段落就地编辑 · 空白处点击新建段落</span>
         <span class="spacer"></span>
@@ -91,9 +123,21 @@ import { computed, nextTick, ref } from 'vue'
 import api from '../api/request'
 import { aiStream } from '../api/ai'
 import { renderMarkdown } from '../utils/markdown.js'
+import DatePicker from './DatePicker.vue'
+import SelectPicker from './SelectPicker.vue'
 
-const props = defineProps({ todo: { type: Object, required: true } })
-const emit = defineEmits(['close', 'saved', 'savedList'])
+const props = defineProps({
+  todo: { type: Object, required: true },
+  todos: { type: Array, default: () => [] }
+})
+const emit = defineEmits(['close', 'saved', 'savedList', 'changed'])
+
+const priorityOptions = [
+  { label: '普通', value: 0 }, { label: '重要', value: 1 }, { label: '紧急', value: 2 }
+]
+const repeatOptions = [
+  { label: '不重复', value: 'none' }, { label: '每天', value: 'daily' }, { label: '每周', value: 'weekly' }
+]
 
 // --- AI 拆解 ---
 const bdOpen = ref(false)
@@ -130,9 +174,16 @@ async function addSelected() {
   bdSaving.value = true
   bdError.value = ''
   try {
-    const items = bdTasks.value.filter(t => t.checked && t.text).map(t => ({ title: t.text, completed: false }))
+    const items = bdTasks.value.filter(t => t.checked && t.text).map(t => ({
+      title: t.text,
+      parentId: props.todo.id,
+      dueDate: props.todo.dueDate || null,
+      category: props.todo.category || null,
+      completed: false
+    }))
     const { data } = await api.post('/todos/batch', items)
     emit('savedList', data)
+    emit('changed')
     bdOpen.value = false
   } catch (e) {
     bdError.value = e.response?.data?.message || '添加失败'
@@ -159,6 +210,12 @@ function splitBlocks(src) {
 }
 
 const blocks = ref(splitBlocks(props.todo.description))
+const dueDate = ref(props.todo.dueDate || '')
+const category = ref(props.todo.category || '')
+const priority = ref(props.todo.priority || 0)
+const repeatRule = ref(props.todo.repeatRule || 'none')
+const remindAt = ref(props.todo.remindAt ? String(props.todo.remindAt).slice(0, 16) : '')
+const subtaskTitle = ref('')
 const editing = ref(null)
 const draft = ref('')
 const uploading = ref(false)
@@ -166,6 +223,47 @@ const saving = ref(false)
 const error = ref('')
 const fileInput = ref(null)
 const editors = ref([])
+
+const categories = computed(() => [...new Set(props.todos.map(t => t.category).filter(Boolean))].sort())
+const subs = computed(() => props.todos.filter(t => t.parentId === props.todo.id))
+const doneSubs = computed(() => subs.value.filter(t => t.completed))
+
+async function addSub() {
+  if (!subtaskTitle.value) return
+  const title = subtaskTitle.value
+  subtaskTitle.value = ''
+  try {
+    await api.post('/todos', {
+      title,
+      parentId: props.todo.id,
+      dueDate: props.todo.dueDate || null,
+      category: props.todo.category || null,
+      priority: 0,
+      completed: false
+    })
+    emit('changed')
+  } catch (e) {
+    error.value = e.response?.data?.message || '添加子任务失败'
+  }
+}
+
+async function toggleSub(sub) {
+  try {
+    await api.put(`/todos/${sub.id}`, { ...sub, completed: !sub.completed })
+    emit('changed')
+  } catch {
+    error.value = '更新子任务失败'
+  }
+}
+
+async function removeSub(sub) {
+  try {
+    await api.delete(`/todos/${sub.id}`)
+    emit('changed')
+  } catch {
+    error.value = '删除子任务失败'
+  }
+}
 
 const renderBlock = (i) => renderMarkdown(blocks.value[i])
 
@@ -239,7 +337,15 @@ async function save() {
   error.value = ''
   try {
     const description = blocks.value.join('\n\n')
-    const { data } = await api.put(`/todos/${props.todo.id}`, { ...props.todo, description })
+    const { data } = await api.put(`/todos/${props.todo.id}`, {
+      ...props.todo,
+      dueDate: dueDate.value || null,
+      category: category.value || null,
+      priority: priority.value,
+      repeatRule: repeatRule.value,
+      remindAt: remindAt.value || null,
+      description
+    })
     emit('saved', data)
     emit('close')
   } catch (err) {
@@ -274,6 +380,30 @@ async function save() {
 }
 .modal-head h3.done { text-decoration: line-through; color: var(--text-secondary); }
 .close-btn { padding: 6px 10px; }
+
+.meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; position: relative; }
+.meta-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-secondary); }
+.meta-grid .meta-wide { grid-column: span 2; }
+.meta-grid .glass-input { padding: 6px 10px; font-size: 13px; }
+
+.subtasks {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius-sm);
+  background: var(--glass-bg);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  position: relative;
+}
+.sub-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.sub-head strong { font-size: 13px; color: var(--text-primary); }
+.sub-head span { font-size: 12px; color: var(--accent); }
+.sub-task { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-primary); padding: 3px 0; }
+.sub-task span { flex: 1; }
+.sub-task span.done { text-decoration: line-through; color: var(--text-secondary); }
+.sub-del { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 16px; }
+.sub-add { display: flex; gap: 8px; margin-top: 8px; }
+.sub-add .glass-input { flex: 1; padding: 6px 10px; font-size: 13px; }
+.sub-add .glass-button { padding: 6px 12px; font-size: 13px; }
 
 .toolbar {
   display: flex;
@@ -352,6 +482,10 @@ async function save() {
   gap: 10px;
   margin-top: 14px;
   position: relative;
+}
+
+@media (max-width: 600px) {
+  .meta-grid { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
 

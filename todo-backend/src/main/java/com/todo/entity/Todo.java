@@ -1,6 +1,7 @@
 package com.todo.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -26,6 +27,40 @@ public class Todo {
     @Column(nullable = false)
     private boolean completed = false;
 
+    @Column(name = "due_date")
+    private LocalDate dueDate;
+
+    /** 越小越重要；拖拽排序时按可见顺序重新编号 */
+    @Column(name = "sort_order", nullable = false, columnDefinition = "int default 0")
+    private int sortOrder = 0;
+
+    @Column(name = "pomodoro_count", nullable = false, columnDefinition = "int default 0")
+    private int pomodoroCount = 0;
+
+    @Column(name = "last_pomodoro_at")
+    private LocalDateTime lastPomodoroAt;
+
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    /** 清单名：null 表示默认清单 */
+    @Column(length = 40)
+    private String category;
+
+    /** 0 普通 / 1 重要 / 2 紧急 */
+    @Column(nullable = false, columnDefinition = "int default 0")
+    private int priority = 0;
+
+    @Column(name = "remind_at")
+    private LocalDateTime remindAt;
+
+    /** none / daily / weekly */
+    @Column(name = "repeat_rule", length = 16)
+    private String repeatRule = "none";
+
+    @Column(name = "parent_id")
+    private Long parentId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -47,6 +82,26 @@ public class Todo {
     public void setEmbedding(String embedding) { this.embedding = embedding; }
     public boolean isCompleted() { return completed; }
     public void setCompleted(boolean completed) { this.completed = completed; }
+    public LocalDate getDueDate() { return dueDate; }
+    public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
+    public int getSortOrder() { return sortOrder; }
+    public void setSortOrder(int sortOrder) { this.sortOrder = sortOrder; }
+    public int getPomodoroCount() { return pomodoroCount; }
+    public void setPomodoroCount(int pomodoroCount) { this.pomodoroCount = pomodoroCount; }
+    public LocalDateTime getLastPomodoroAt() { return lastPomodoroAt; }
+    public void setLastPomodoroAt(LocalDateTime lastPomodoroAt) { this.lastPomodoroAt = lastPomodoroAt; }
+    public LocalDateTime getCompletedAt() { return completedAt; }
+    public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
+    public int getPriority() { return priority; }
+    public void setPriority(int priority) { this.priority = priority; }
+    public LocalDateTime getRemindAt() { return remindAt; }
+    public void setRemindAt(LocalDateTime remindAt) { this.remindAt = remindAt; }
+    public String getRepeatRule() { return repeatRule; }
+    public void setRepeatRule(String repeatRule) { this.repeatRule = repeatRule; }
+    public Long getParentId() { return parentId; }
+    public void setParentId(Long parentId) { this.parentId = parentId; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

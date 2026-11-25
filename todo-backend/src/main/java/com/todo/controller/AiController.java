@@ -88,7 +88,7 @@ public class AiController {
     @PostMapping("/search")
     public List<Todo> search(@RequestBody Map<String, String> body) {
         String q = body.getOrDefault("q", "").trim();
-        List<Todo> todos = todoRepository.findByUserIdOrderByCreatedAtDesc(CurrentUser.get());
+        List<Todo> todos = todoRepository.findByUserIdOrderBySortOrderAscCreatedAtDesc(CurrentUser.get());
         if (q.isEmpty()) return todos;
 
         if (!ai.semanticEnabled()) {

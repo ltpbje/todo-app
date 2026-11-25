@@ -35,6 +35,17 @@ public class TodoController {
         return todoService.createBatch(dtos);
     }
 
+    @PutMapping("/reorder")
+    public List<Todo> reorder(@RequestBody List<Long> ids) {
+        todoService.reorder(ids);
+        return todoService.list(null);
+    }
+
+    @PostMapping("/{id}/pomodoro")
+    public Todo addPomodoro(@PathVariable Long id) {
+        return todoService.addPomodoro(id);
+    }
+
     @PutMapping("/{id}")
     public Todo update(@PathVariable Long id, @Valid @RequestBody TodoDTO dto) {
         return todoService.update(id, dto);

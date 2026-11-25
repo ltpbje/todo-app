@@ -1,22 +1,24 @@
 <template>
   <div class="page">
     <div class="content">
-      <div class="header">
-        <div>
-          <h2>我的任务</h2>
-          <p class="stat" v-if="todos.length">共 {{ todos.length }} 项 · {{ doneCount }} 已完成</p>
-        </div>
-        <button class="glass-button glass-glossy" v-glass-glow @click="logout">退出登录</button>
-      </div>
-
       <GlassObject class="glass-card" v-glass-glow>
         <div class="glare glass-glare"></div>
         <form class="add-form" @submit.prevent="add">
-          <input v-model.trim="newTitle" class="glass-input" placeholder="添加新任务，回车确认…" :disabled="adding" />
-          <button type="submit" class="glass-button glass-glossy" v-glass-glow :disabled="!newTitle || adding">
-            <span v-if="adding" class="spinner"></span>
-            {{ adding ? '添加中' : '添加' }}
-          </button>
+          <div class="add-main">
+            <input v-model.trim="newTitle" class="glass-input" placeholder="添加新任务，回车确认…" :disabled="adding" />
+            <DatePicker v-model="newDue" class="due-input" />
+            <button type="button" class="glass-button options-btn" :class="{ active: showOptions }" :aria-expanded="showOptions" @click="showOptions = !showOptions">选项</button>
+            <button type="submit" class="glass-button glass-glossy" v-glass-glow :disabled="!newTitle || adding">
+              <span v-if="adding" class="spinner"></span>
+              {{ adding ? '添加中' : '添加' }}
+            </button>
+          </div>
+          <div v-if="showOptions" class="add-meta">
+            <input v-model.trim="newCategory" class="glass-input" list="category-options" placeholder="清单（默认）" aria-label="清单" />
+            <datalist id="category-options"><option v-for="c in categories" :key="c" :value="c" /></datalist>
+            <SelectPicker v-model="newPriority" :options="priorityOptions" label="优先级" class="meta-select" />
+            <SelectPicker v-model="newRepeat" :options="repeatOptions" label="重复" class="meta-select" />
+          </div>
         </form>
 
         <div class="ai-bar">
@@ -58,28 +60,62 @@
 
         <div class="filters">
           <button
-            v-for="opt in ['all', 'active', 'done']"
-            :key="opt"
+            v-for="opt in views"
+            :key="opt.key"
             class="glass-pill"
-            :class="{ active: filter === opt }"
-            @click="filter = opt"
-          >{{ { all: '全部', active: '未完成', done: '已完成' }[opt] }}</button>
+            :class="{ active: view === opt.key }"
+            @click="view = opt.key"
+          >{{ opt.label }}</button>
+          <SelectPicker v-model="categoryFilter" :options="categoryOptions" label="筛选清单" class="filter-select" />
+          <button v-if="dateFilter" class="glass-pill" @click="dateFilter = null">{{ dateFilter }} ×</button>
           <span v-if="searching" class="spinner"></span>
+        </div>
+
+        <div v-if="view === 'today'" class="ivy">
+          <button type="button" class="ivy-head" :aria-expanded="ivyOpen" @click="ivyOpen = !ivyOpen">
+            <strong>今日六件事</strong>
+            <span>{{ todayDone }}/6 · {{ ivyOpen ? '收起' : '展开' }}</span>
+          </button>
+          <div class="ivy-progress"><i :style="{ width: Math.min(todayDone / 6 * 100, 100) + '%' }"></i></div>
+          <template v-if="ivyOpen">
+            <ol v-if="todayTasks.length">
+              <li v-for="(t, i) in todayTasks.slice(0, 6)" :key="t.id" :class="{ done: t.completed }">
+                <span class="ivy-no">{{ i + 1 }}</span>{{ t.title }}
+              </li>
+            </ol>
+            <p v-else class="ivy-empty">按重要性拖动排序，先完成前六件</p>
+            <p v-if="todayTasks.length > 6" class="ivy-warn">今天超过 6 件，先专注前六件，其余安排到明天</p>
+          </template>
         </div>
 
         <p v-if="error" class="error">{{ error }}</p>
         <p v-if="!loading && !filtered.length" class="empty">
-          {{ filter === 'all' ? '还没有任务，添加一个吧' : '这个分类下暂无任务' }}
+          {{ view === 'all' ? '还没有任务，添加一个吧' : view === 'today' ? '今天还没有任务，添加一个或到「全部」里安排' : '这个分类下暂无任务' }}
         </p>
 
         <transition-group name="list" tag="ul" class="todo-list">
-          <li v-for="todo in filtered" :key="todo.id" :class="{ done: todo.completed }">
+          <li
+            v-for="todo in filtered"
+            :key="todo.id"
+            :class="{ done: todo.completed, dragging: dragId === todo.id }"
+            :draggable="!searchResults"
+            @dragstart="onDragStart(todo, $event)"
+            @dragover="onDragOver($event)"
+            @drop="onDrop(todo, $event)"
+            @dragend="dragId = null"
+          >
             <button class="check" :title="todo.completed ? '标记为未完成' : '标记为完成'" @click="toggle(todo)">
               <svg v-if="todo.completed" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
             </button>
             <span v-if="editingId !== todo.id" class="title" @dblclick="startEdit(todo)">{{ todo.title }}</span>
+            <span v-if="todo.dueDate" class="due-chip">{{ dueLabel(todo.dueDate) }}</span>
+            <span v-if="todo.category" class="cat-chip">{{ todo.category }}</span>
+            <span v-if="todo.priority" class="pri-chip" :class="'p' + todo.priority">{{ ['', '重要', '紧急'][todo.priority] }}</span>
+            <span v-if="subProgress(todo)" class="sub-chip">{{ subProgress(todo) }}</span>
+            <span v-if="todo.repeatRule && todo.repeatRule !== 'none'" class="repeat-chip">{{ todo.repeatRule === 'daily' ? '每天' : '每周' }}</span>
+            <span v-if="todo.pomodoroCount" class="pomodoro-chip" title="已完成番茄数">番茄 ×{{ todo.pomodoroCount }}</span>
             <input
-              v-else
+              v-if="editingId === todo.id"
               v-model.trim="editTitle"
               class="edit glass-input"
               v-focus
@@ -98,28 +134,59 @@
         </transition-group>
       </GlassObject>
 
+      <PomodoroTimer :todos="todos" @finish="onPomodoro" />
+
       <TodoDetailModal
         v-if="detailTodo"
         :todo="detailTodo"
+        :todos="todos"
         @close="detailTodo = null"
         @saved="onDetailSaved"
         @saved-list="onSavedList"
+        @changed="load"
       />
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '../api/request'
 import { aiPost } from '../api/ai'
 import TodoDetailModal from '../components/TodoDetailModal.vue'
+import DatePicker from '../components/DatePicker.vue'
+import SelectPicker from '../components/SelectPicker.vue'
+import PomodoroTimer from '../components/PomodoroTimer.vue'
 import GlassObject from '../components/GlassObject.vue'
+import { dateKey, completedOn } from '../utils/plan'
 
-const router = useRouter()
+const route = useRoute()
 const todos = ref([])
 const detailTodo = ref(null)
+const views = [
+  { key: 'today', label: '今天' },
+  { key: 'tomorrow', label: '明天' },
+  { key: 'all', label: '全部' },
+  { key: 'done', label: '已完成' }
+]
+const view = ref('today')
+const newDue = ref(dateKey(0))
+const showOptions = ref(false)
+const ivyOpen = ref(false)
+const newCategory = ref('')
+const newPriority = ref(0)
+const newRepeat = ref('none')
+const priorityOptions = [
+  { label: '普通', value: 0 }, { label: '重要', value: 1 }, { label: '紧急', value: 2 }
+]
+const repeatOptions = [
+  { label: '不重复', value: 'none' }, { label: '每天', value: 'daily' }, { label: '每周', value: 'weekly' }
+]
+const categoryFilter = ref('all')
+const dateFilter = ref(null)
+const dragId = ref(null)
+const notifiedIds = new Set()
 
 function onDetailSaved(data) {
   const idx = todos.value.findIndex(t => t.id === data.id)
@@ -153,7 +220,11 @@ async function parseNl() {
 async function addParsed() {
   addingBatch.value = true
   try {
-    const items = parsed.value.filter(t => t.checked).map(t => ({ title: t.title, dueDate: t.dueDate, completed: false }))
+    const items = parsed.value.filter(t => t.checked).map(t => ({
+      title: t.title,
+      dueDate: /^\d{4}-\d{2}-\d{2}/.test(t.dueDate || '') ? String(t.dueDate).slice(0, 10) : null,
+      completed: false
+    }))
     const { data } = await api.post('/todos/batch', items)
     todos.value.unshift(...data)
     parsed.value = []
@@ -184,7 +255,6 @@ async function doSearch() {
 function onSearchInput() { if (!searchQ.value) searchResults.value = null }
 function clearSearch() { searchQ.value = ''; searchResults.value = null }
 const newTitle = ref('')
-const filter = ref('all')
 const loading = ref(true)
 const adding = ref(false)
 const deletingId = ref(null)
@@ -194,21 +264,90 @@ const editTitle = ref('')
 
 const vFocus = { mounted: (el) => el.focus() }
 
+const categories = computed(() => [...new Set(todos.value.map(t => t.category).filter(Boolean))].sort())
+const categoryOptions = computed(() => [{ label: '全部清单', value: 'all' }, ...categories.value.map(c => ({ label: c, value: c }))])
+
 const filtered = computed(() => {
   if (searchResults.value) return searchResults.value
-  if (filter.value === 'active') return todos.value.filter(t => !t.completed)
-  if (filter.value === 'done') return todos.value.filter(t => t.completed)
-  return todos.value
+  let list = todos.value
+  if (dateFilter.value) list = list.filter(t => t.dueDate === dateFilter.value)
+  else if (view.value === 'today') list = list.filter(t => t.dueDate === dateKey(0))
+  else if (view.value === 'tomorrow') list = list.filter(t => t.dueDate === dateKey(1))
+  else if (view.value === 'done') list = list.filter(t => t.completed)
+  if (categoryFilter.value !== 'all') list = list.filter(t => (t.category || '') === categoryFilter.value)
+  return list
 })
 
-const doneCount = computed(() => todos.value.filter(t => t.completed).length)
+const todayTasks = computed(() => todos.value.filter(t => !t.parentId && t.dueDate === dateKey(0)))
+const todayDone = computed(() => todos.value.filter(t => !t.parentId && completedOn(t, dateKey(0))).length)
+
+function subProgress(todo) {
+  const subs = todos.value.filter(s => s.parentId === todo.id)
+  if (!subs.length) return ''
+  return `${subs.filter(s => s.completed).length}/${subs.length} 子任务`
+}
+
+function dueLabel(value) {
+  if (value === dateKey(0)) return '今天'
+  if (value === dateKey(1)) return '明天'
+  return value.slice(5)
+}
+
+function checkReminders() {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+  const now = Date.now()
+  for (const t of todos.value) {
+    if (!t.remindAt || t.completed || notifiedIds.has(t.id)) continue
+    const when = new Date(t.remindAt).getTime()
+    if (when <= now && now - when < 3600000) {
+      new Notification(`任务提醒：${t.title}`, { body: t.dueDate ? `截止 ${t.dueDate}` : '该处理这个任务了' })
+      notifiedIds.add(t.id)
+    }
+  }
+}
+
+function onDragStart(todo, e) {
+  if (searchResults.value) return
+  dragId.value = todo.id
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', String(todo.id))
+}
+function onDragOver(e) { if (dragId.value) e.preventDefault() }
+async function onDrop(target, e) {
+  e.preventDefault()
+  const id = dragId.value || Number(e.dataTransfer.getData('text/plain'))
+  dragId.value = null
+  if (!id || id === target.id) return
+  const from = todos.value.findIndex(t => t.id === id)
+  const to = todos.value.findIndex(t => t.id === target.id)
+  if (from < 0 || to < 0) return
+  const [moved] = todos.value.splice(from, 1)
+  todos.value.splice(to, 0, moved)
+  try {
+    const { data } = await api.put('/todos/reorder', todos.value.map(t => t.id))
+    todos.value = data
+  } catch {
+    error.value = '排序保存失败'
+  }
+}
+
+async function onPomodoro(id) {
+  if (!id) return
+  try {
+    const { data } = await api.post(`/todos/${id}/pomodoro`)
+    const idx = todos.value.findIndex(t => t.id === data.id)
+    if (idx !== -1) Object.assign(todos.value[idx], data)
+  } catch {
+    error.value = '番茄记录失败'
+  }
+}
 
 async function load() {
   loading.value = true
   try {
-    const { data } = await api.get('/todos')
-    todos.value = data
-  } catch (e) {
+    todos.value = (await api.get('/todos')).data
+    checkReminders()
+  } catch {
     error.value = '加载任务失败'
   } finally {
     loading.value = false
@@ -219,7 +358,14 @@ async function add() {
   if (!newTitle.value || adding.value) return
   adding.value = true
   try {
-    const { data } = await api.post('/todos', { title: newTitle.value, completed: false })
+    const { data } = await api.post('/todos', {
+      title: newTitle.value,
+      dueDate: newDue.value || null,
+      category: newCategory.value || null,
+      priority: newPriority.value,
+      repeatRule: newRepeat.value,
+      completed: false
+    })
     todos.value.unshift(data)
     newTitle.value = ''
   } catch (e) {
@@ -233,6 +379,7 @@ async function toggle(todo) {
   try {
     const { data } = await api.put(`/todos/${todo.id}`, { ...todo, completed: !todo.completed })
     Object.assign(todo, data)
+    if (data.repeatRule && data.repeatRule !== 'none' && data.completed) await load()
   } catch (e) {
     error.value = '更新失败'
   }
@@ -272,37 +419,32 @@ async function saveEdit(todo) {
   }
 }
 
-function logout() {
-  localStorage.removeItem('token')
-  router.push('/login')
-}
-
-onMounted(load)
+let reminderTimer = null
+onMounted(() => {
+  if (route.query.date) {
+    dateFilter.value = String(route.query.date)
+    view.value = 'all'
+  }
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission()
+  load()
+  reminderTimer = setInterval(checkReminders, 30000)
+})
+onUnmounted(() => clearInterval(reminderTimer))
 </script>
 
 <style scoped>
-.page {
-  min-height: 100vh;
-  padding: 32px 20px;
-  position: relative;
-  z-index: 1;
-}
-
-.content { max-width: 620px; margin: 0 auto; }
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-}
-.header h2 { margin: 0; font-size: 28px; font-weight: 700; color: var(--text-primary); }
-.stat { margin: 6px 0 0; font-size: 13px; color: var(--text-secondary); }
-
+.page { position: relative; z-index: 1; }
+.content { max-width: 720px; margin: 0 auto; }
 .glass-card { padding: 24px; }
 
-.add-form { display: flex; gap: 10px; margin-bottom: 16px; position: relative; }
-.add-form .glass-input { flex: 1; }
+.add-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; position: relative; }
+.add-main, .add-meta { display: flex; gap: 8px; align-items: center; }
+.add-form .glass-input { flex: 1; min-width: 0; }
+.add-meta .glass-input { padding: 8px 10px; font-size: 13px; }
+.meta-select { flex: 0 0 92px; }
+.due-input { flex: 0 0 140px; padding: 10px; font-size: 14px; }
+.options-btn { flex: 0 0 auto; padding: 9px 12px; font-size: 13px; }
+.options-btn.active { background: var(--accent-grad); color: #fff; }
 
 .spinner {
   width: 14px;
@@ -321,7 +463,29 @@ onMounted(load)
 /* 删除按钮用的深色 spinner（跟随图标颜色，而非白色） */
 .spinner-dark { border-color: rgba(93, 93, 120, 0.25); border-top-color: currentColor; }
 
-.filters { display: flex; gap: 8px; margin-bottom: 16px; position: relative; align-items: center; }
+.filters { display: flex; gap: 8px; margin-bottom: 16px; position: relative; align-items: center; flex-wrap: wrap; }
+.filter-select { flex: 0 0 112px; }
+.filter-select .select-trigger { padding: 7px 10px; font-size: 13px; }
+
+.ivy {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius-sm);
+  background: var(--glass-bg);
+  padding: 10px 14px 12px;
+  margin-bottom: 16px;
+  position: relative;
+}
+.ivy-head { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0; border: none; background: none; cursor: pointer; }
+.ivy-head strong { color: var(--text-primary); font-size: 14px; }
+.ivy-head span { font-size: 12px; color: var(--accent); }
+.ivy-progress { height: 4px; border-radius: 999px; background: var(--glass-bg-strong); overflow: hidden; margin-top: 8px; }
+.ivy-progress i { display: block; height: 100%; border-radius: 999px; background: var(--accent-grad); }
+.ivy ol { margin: 10px 0 0; padding-left: 4px; list-style: none; }
+.ivy li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-primary); padding: 3px 0; }
+.ivy li.done { text-decoration: line-through; color: var(--text-secondary); }
+.ivy-no { display: inline-flex; width: 18px; height: 18px; align-items: center; justify-content: center; border-radius: 50%; background: var(--accent-grad); color: #fff; font-size: 11px; flex-shrink: 0; }
+.ivy-empty, .ivy-warn { margin: 4px 0 0; font-size: 12px; color: var(--text-secondary); }
+.ivy-warn { color: var(--danger); }
 
 .ai-bar { display: flex; gap: 8px; margin-bottom: 16px; position: relative; }
 .ai-bar .search-input { flex: 1; padding: 8px 12px; }
@@ -353,6 +517,18 @@ onMounted(load)
 }
 .todo-list li:hover { background: var(--glass-bg); }
 .todo-list li:last-child { border-bottom: none; }
+.todo-list li[draggable="true"] { cursor: grab; }
+.todo-list li.dragging { opacity: 0.4; }
+.due-chip, .pomodoro-chip, .cat-chip, .pri-chip, .sub-chip, .repeat-chip {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--glass-bg-strong);
+  color: var(--accent);
+}
+.pomodoro-chip, .sub-chip { color: var(--text-secondary); }
+.pri-chip.p2 { background: rgba(224, 52, 75, 0.16); color: var(--danger); }
 
 .check {
   width: 24px;
@@ -402,4 +578,12 @@ li.done .title { text-decoration: line-through; color: var(--text-secondary); }
 .list-enter-from, .list-leave-to { opacity: 0; transform: translateX(-12px); }
 .list-leave-active { position: absolute; width: 100%; }
 .list-move { transition: transform 0.25s ease; }
+
+@media (max-width: 600px) {
+  .due-input { flex-basis: 130px; }
+  .add-main, .add-meta { flex-wrap: wrap; }
+  .add-meta .glass-input { flex: 1 1 45%; }
+  .meta-select { flex: 1 1 45%; }
+  .filter-select { flex: 1 1 100px; }
+}
 </style>
