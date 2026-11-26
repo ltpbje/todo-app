@@ -1,6 +1,6 @@
 <template>
   <div ref="root" class="select-picker">
-    <button ref="trigger" type="button" class="select-trigger glass-input" :aria-label="label" @click="toggle">
+    <button ref="trigger" type="button" class="select-trigger glass-input" :aria-label="label" :aria-expanded="open" @click="toggle">
       <span class="select-value">{{ currentLabel }}</span>
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="m6 9 6 6 6-6" />
@@ -91,7 +91,8 @@ onUnmounted(() => {
   width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 6px;
   padding: 9px 12px; font-size: 14px; text-align: left; white-space: nowrap;
 }
-.select-trigger svg { flex-shrink: 0; color: var(--accent); transition: transform 0.2s; }
+.select-trigger svg { flex-shrink: 0; color: var(--accent); transition: transform 0.25s var(--liquid-ease); }
+.select-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
 
 .select-pop {
   position: fixed;
@@ -103,6 +104,8 @@ onUnmounted(() => {
   border-radius: var(--glass-radius-sm);
   background: #fafaff;
   box-shadow: 0 16px 40px rgba(40, 34, 90, 0.26), 0 2px 8px rgba(40, 34, 90, 0.12);
+  transform-origin: top left;
+  animation: pop-in 0.2s var(--liquid-ease) both;
 }
 html.dark .select-pop {
   border-color: rgba(255, 255, 255, 0.14);
@@ -116,5 +119,7 @@ html.dark .select-pop {
 }
 .select-option:hover { background: var(--glass-bg-hover); }
 .select-option.active { color: var(--accent); font-weight: 600; }
-.select-option svg { flex-shrink: 0; }
+.select-option svg { flex-shrink: 0; animation: check-pop 0.2s var(--liquid-ease); }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-5px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes check-pop { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
 </style>

@@ -3,6 +3,7 @@ import Login from '../views/Login.vue'
 import TodoList from '../views/TodoList.vue'
 import CalendarView from '../views/CalendarView.vue'
 import StatsView from '../views/StatsView.vue'
+import SettingsView from '../views/SettingsView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -10,6 +11,7 @@ const router = createRouter({
     { path: '/', component: TodoList },
     { path: '/calendar', component: CalendarView },
     { path: '/stats', component: StatsView },
+    { path: '/settings', component: SettingsView },
     { path: '/login', component: Login }
   ]
 })

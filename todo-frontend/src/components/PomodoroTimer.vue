@@ -5,12 +5,19 @@
       {{ open ? '收起' : '专注' }}
     </button>
 
+    <transition name="pomo">
     <div v-if="open" class="glass-panel pomo-panel" v-glass-glow>
       <div class="pomo-head">
         <strong>番茄专注</strong>
         <button class="pomo-close" aria-label="关闭" @click="open = false">✕</button>
       </div>
-      <div class="clock">{{ mm }}:{{ ss }}</div>
+      <div class="clock" :class="{ running, finished }">
+        <svg class="progress-ring" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="ring-track" cx="60" cy="60" r="54" />
+          <circle class="ring-fill" cx="60" cy="60" r="54" :style="{ strokeDashoffset: ringOffset }" />
+        </svg>
+        <span>{{ mm }}:{{ ss }}</span>
+      </div>
       <SelectPicker v-model="selectedId" :options="taskOptions" label="关联任务" class="pomo-select" />
       <SelectPicker v-model="noiseType" :options="noiseOptions" label="白噪音类型" class="pomo-select" />
       <div class="pomo-actions">
@@ -20,6 +27,7 @@
       </div>
       <p class="tip">完成一个番茄后自动计入所选任务</p>
     </div>
+    </transition>
   </div>
 </template>
 
@@ -45,6 +53,8 @@ const noiseOptions = [
 ]
 const mm = computed(() => String(Math.floor(remaining.value / 60)).padStart(2, '0'))
 const ss = computed(() => String(remaining.value % 60).padStart(2, '0'))
+const ringOffset = computed(() => 339.29 * (1 - remaining.value / DURATION))
+const finished = ref(false)
 
 watch(() => props.todos, list => {
   if (selectedId.value === undefined && list.length) selectedId.value = list[0].id
@@ -75,6 +85,7 @@ function pause() {
 function reset() {
   pause()
   remaining.value = DURATION
+  finished.value = false
 }
 
 function tick() {
@@ -82,7 +93,8 @@ function tick() {
   if (remaining.value) return
   pause()
   emit('finish', selectedId.value)
-  remaining.value = DURATION
+  finished.value = true
+  setTimeout(() => { finished.value = false }, 1600)
 }
 
 // ponytail: 固定音量的循环合成噪声；没有音量滑块，后续要调音可加 gain 控件
@@ -148,11 +160,23 @@ onUnmounted(() => {
 .pomo-root { position: fixed; right: 18px; bottom: 18px; z-index: 140; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
 .pomo-fab { display: flex; align-items: center; gap: 8px; padding: 10px 16px; }
 .tomato-dot { width: 12px; height: 12px; border-radius: 50%; background: linear-gradient(135deg, #ff6b6b, #e0344b); box-shadow: 0 0 12px rgba(224, 52, 75, 0.6); }
+.pomo-root:has(.pomo-panel) .tomato-dot { animation: focus-pulse 2s ease-in-out infinite; }
 .pomo-panel { width: 272px; padding: 16px; position: relative; }
 .pomo-head { display: flex; align-items: center; justify-content: space-between; position: relative; }
 .pomo-head strong { color: var(--text-primary); font-size: 15px; }
 .pomo-close { background: none; border: none; color: var(--text-secondary); cursor: pointer; }
-.clock { position: relative; text-align: center; font-size: 44px; font-weight: 700; letter-spacing: 2px; color: var(--accent); margin: 6px 0 12px; font-variant-numeric: tabular-nums; }
+.clock { position: relative; width: 120px; height: 120px; margin: 6px auto 12px; display: grid; place-items: center; color: var(--accent); font-size: 36px; font-weight: 700; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+.clock > span { position: relative; z-index: 1; }
+.progress-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.progress-ring circle { fill: none; stroke-width: 3; }
+.ring-track { stroke: var(--glass-border); }
+.ring-fill { stroke: var(--accent); stroke-linecap: round; stroke-dasharray: 339.29; transition: stroke-dashoffset 0.5s linear; }
+.clock.running .ring-fill { filter: drop-shadow(0 0 4px rgba(110, 130, 255, 0.5)); }
+.clock.finished { animation: pomo-done 0.7s var(--liquid-ease); }
+.pomo-enter-active, .pomo-leave-active { transition: opacity 0.2s ease, transform 0.3s var(--liquid-ease); transform-origin: bottom right; }
+.pomo-enter-from, .pomo-leave-to { opacity: 0; transform: translateY(10px) scale(0.92); }
+@keyframes focus-pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 12px rgba(224, 52, 75, 0.6); } 50% { transform: scale(1.25); box-shadow: 0 0 20px rgba(224, 52, 75, 0.85); } }
+@keyframes pomo-done { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.08); } 70% { transform: scale(0.98); } }
 .pomo-select { width: 100%; position: relative; }
 .pomo-select .select-trigger { padding: 8px 10px; font-size: 13px; }
 .pomo-actions { display: flex; gap: 6px; margin-top: 10px; position: relative; }

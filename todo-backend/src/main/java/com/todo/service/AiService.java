@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.todo.dto.AiConfig;
 import com.todo.repository.TodoRepository;
 import com.todo.entity.Todo;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +17,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Map;
 import java.util.function.Consumer;
 
 /**
@@ -49,18 +51,38 @@ public class AiService {
         this.todoRepository = todoRepository;
     }
 
-    public boolean enabled() { return apiKey != null && !apiKey.isBlank(); }
+    public AiConfig config(Map<String, String> overrides) {
+        if (overrides == null) return new AiConfig(baseUrl, apiKey, chatModel, embedModel);
+        String b = pick(overrides.get("baseUrl"), baseUrl);
+        return new AiConfig(
+                b.endsWith("/") ? b.substring(0, b.length() - 1) : b,
+                pick(overrides.get("apiKey"), apiKey),
+                pick(overrides.get("chatModel"), chatModel),
+                pick(overrides.get("embedModel"), embedModel));
+    }
+
+    private static String pick(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
+    }
+
+    public boolean enabled() { return enabled(config(null)); }
+    public boolean enabled(AiConfig c) { return c.apiKey() != null && !c.apiKey().isBlank(); }
 
     /** 仅在配置了 embedding 模型时才启用语义能力 */
-    public boolean semanticEnabled() { return enabled() && embedModel != null && !embedModel.isBlank(); }
+    public boolean semanticEnabled() { return semanticEnabled(config(null)); }
+    public boolean semanticEnabled(AiConfig c) { return enabled(c) && c.embedModel() != null && !c.embedModel().isBlank(); }
 
     /** 把对话补全的增量片段流式推给消费者（底层是 SSE 的 "data:" 行） */
     public void chatStream(String system, String user, Consumer<String> onDelta) {
-        ObjectNode body = baseBody(chatModel);
+        chatStream(config(null), system, user, onDelta);
+    }
+
+    public void chatStream(AiConfig c, String system, String user, Consumer<String> onDelta) {
+        ObjectNode body = baseBody(c.chatModel());
         body.put("stream", true);
         addMessages(body, system, user);
 
-        HttpRequest req = request("/chat/completions", body).timeout(Duration.ofSeconds(120)).build();
+        HttpRequest req = request(c, "/chat/completions", body).timeout(Duration.ofSeconds(120)).build();
         try {
             HttpResponse<java.util.stream.Stream<String>> resp =
                     http.send(req, HttpResponse.BodyHandlers.ofLines());
@@ -87,11 +109,15 @@ public class AiService {
 
     /** 非流式对话，要求返回一个 JSON 对象（JSON 模式） */
     public String chatJson(String system, String user) {
-        ObjectNode body = baseBody(chatModel);
+        return chatJson(config(null), system, user);
+    }
+
+    public String chatJson(AiConfig c, String system, String user) {
+        ObjectNode body = baseBody(c.chatModel());
         body.set("response_format", mapper.createObjectNode().put("type", "json_object"));
         addMessages(body, system, user);
 
-        HttpRequest req = request("/chat/completions", body).timeout(Duration.ofSeconds(60)).build();
+        HttpRequest req = request(c, "/chat/completions", body).timeout(Duration.ofSeconds(60)).build();
         try {
             HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() != 200) {
@@ -106,11 +132,15 @@ public class AiService {
 
     /** 文本 → 向量，调用 /embeddings 接口 */
     public double[] embed(String text) {
+        return embed(config(null), text);
+    }
+
+    public double[] embed(AiConfig c, String text) {
         ObjectNode body = mapper.createObjectNode();
-        body.put("model", embedModel);
+        body.put("model", c.embedModel());
         body.putArray("input").add(text);
 
-        HttpRequest req = request("/embeddings", body).timeout(Duration.ofSeconds(30)).build();
+        HttpRequest req = request(c, "/embeddings", body).timeout(Duration.ofSeconds(30)).build();
         try {
             HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() != 200) {
@@ -139,13 +169,17 @@ public class AiService {
 
     /** 读取已存的向量，若没有则即时计算并持久化（惰性回填） */
     public double[] ensureEmbedding(Todo todo) {
+        return ensureEmbedding(todo, config(null));
+    }
+
+    public double[] ensureEmbedding(Todo todo, AiConfig c) {
         if (todo.getEmbedding() != null) {
             try { return mapper.readValue(todo.getEmbedding(), double[].class); }
             catch (Exception ignored) { /* 数据陈旧或损坏——在下方重新计算 */ }
         }
-        if (!semanticEnabled()) return null;
+        if (!semanticEnabled(c)) return null;
         try {
-            double[] vec = embed(todo.getTitle());
+            double[] vec = embed(c, todo.getTitle());
             todo.setEmbedding(mapper.writeValueAsString(vec));
             todoRepository.save(todo);
             return vec;
@@ -174,10 +208,10 @@ public class AiService {
         msgs.addObject().put("role", "user").put("content", user);
     }
 
-    private HttpRequest.Builder request(String path, ObjectNode body) {
+    private HttpRequest.Builder request(AiConfig c, String path, ObjectNode body) {
         try {
-            return HttpRequest.newBuilder(URI.create(baseUrl + path))
-                    .header("Authorization", "Bearer " + apiKey)
+            return HttpRequest.newBuilder(URI.create(c.baseUrl() + path))
+                    .header("Authorization", "Bearer " + c.apiKey())
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)));
         } catch (Exception e) {

@@ -25,6 +25,8 @@ ai:
   api-key: ${AI_API_KEY:}
   chat-model: ${AI_CHAT_MODEL:deepseek-chat}
   embed-model: ${AI_EMBED_MODEL:}   # e.g. text-embedding-3-small / BAAI/bge-m3; empty = keyword search only
+  # 用于加密用户保存到数据库的 API Key；生产环境务必覆盖
+  config-secret: ${AI_CONFIG_SECRET:change-me-please-32-bytes-min-secret-key!!}
 
 server:
   port: 8080

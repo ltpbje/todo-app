@@ -50,7 +50,7 @@
   --glass-radius: 28px;
   --glass-radius-sm: 14px;
   --liquid-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --liquid-duration: 0.25s;
+  --liquid-duration: 0.16s;
 
   --text-primary: #1d1d2b;
   --text-secondary: #55556e;
@@ -130,21 +130,14 @@ body::before {
   width: 480px; height: 480px;
   left: -110px; top: -130px;
   background: radial-gradient(circle, #5f9bff 0%, rgba(95, 155, 255, 0.55) 40%, transparent 70%);
-  animation: glass-drift 16s var(--liquid-ease) infinite alternate;
 }
 body::after {
   width: 460px; height: 460px;
   right: -100px; bottom: -120px;
   background: radial-gradient(circle, #b06bff 0%, rgba(255, 122, 178, 0.5) 45%, transparent 72%);
-  animation: glass-drift 16s var(--liquid-ease) -8s infinite alternate-reverse;
 }
 html.dark body::before { background: radial-gradient(circle, rgba(122, 168, 255, 0.65) 0%, rgba(80, 120, 255, 0.25) 45%, transparent 70%); }
 html.dark body::after { background: radial-gradient(circle, rgba(200, 139, 255, 0.6) 0%, rgba(255, 110, 170, 0.25) 45%, transparent 72%); }
-
-@keyframes glass-drift {
-  from { transform: translate(0, 0) scale(1); }
-  to { transform: translate(60px, 50px) scale(1.12); }
-}
 
 /* ---------- Step 2: 玻璃工具类 ---------- */
 /* 大面积表面：真正的折射（backdrop-filter + 光泽层） */
@@ -323,9 +316,10 @@ html.dark .glass-button.accent { color: #fff; }
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(20, 22, 40, 0.35);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  /* 浅色遮罩几乎不模糊：弹窗要和卡片一样透出清晰的背景纹理 */
+  background: rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -333,12 +327,38 @@ html.dark .glass-button.accent { color: #fff; }
 }
 html.dark .glass-overlay { background: rgba(0, 0, 0, 0.5); }
 .glass-modal {
+  /* 弹窗叠在主卡片上：加强磨砂和填充，避免上下两层内容视觉重叠 */
+  background: var(--glass-sheen), rgba(255, 255, 255, 0.62);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  backdrop-filter: blur(18px) saturate(1.6);
+  --text-primary: #141424;
+  --text-secondary: #3d3d5c;
   border-radius: var(--glass-radius);
   max-width: 480px;
   width: calc(100% - 48px);
   padding: 28px;
-  animation: modal-in 0.3s var(--liquid-ease) both;
+  animation: modal-in var(--liquid-duration) var(--liquid-ease) both;
 }
+html.dark .glass-modal {
+  background: var(--glass-sheen), rgba(24, 23, 42, 0.72);
+  --text-primary: #f3f1ff;
+  --text-secondary: #d2d0e6;
+}
+.glass-modal .glass-input {
+  background: rgba(255, 255, 255, 0.42);
+  border-color: rgba(255, 255, 255, 0.72);
+}
+html.dark .glass-modal .glass-input {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.glass-modal .doc, .glass-modal .subtasks, .glass-modal .bd-panel {
+  background: rgba(255, 255, 255, 0.18);
+}
+html.dark .glass-modal .doc, html.dark .glass-modal .subtasks, html.dark .glass-modal .bd-panel {
+  background: rgba(255, 255, 255, 0.04);
+}
+.glass-modal .glass-input::placeholder { opacity: 1; }
 @keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modal-in {
   from { opacity: 0; transform: translateY(16px) scale(0.96); }
@@ -370,7 +390,8 @@ html.dark .glass-overlay { background: rgba(0, 0, 0, 0.5); }
     var(--glass-highlight),
     var(--glass-lens);
   font-family: inherit;
-  transition: all var(--liquid-duration) var(--liquid-ease);
+  transition: background var(--liquid-duration) ease, color var(--liquid-duration) ease,
+    border-color var(--liquid-duration) ease, box-shadow var(--liquid-duration) ease;
 }
 .glass-pill:hover { background: var(--glass-bg-hover); }
 .glass-pill.active {
@@ -392,7 +413,7 @@ html.dark .glass-overlay { background: rgba(0, 0, 0, 0.5); }
   border-radius: inherit;
   z-index: 0;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.15s ease;
   background: radial-gradient(
     320px circle at var(--x, 50%) var(--y, 50%),
     var(--glow-color) 0%,
@@ -428,21 +449,21 @@ html.dark .glass-overlay { background: rgba(0, 0, 0, 0.5); }
 }
 ::view-transition-old(root) {
   z-index: 1;
-  animation: theme-dim 0.9s ease both;
+  animation: theme-dim 0.3s ease both;
 }
 ::view-transition-new(root) {
   z-index: 2;
-  animation: theme-reveal 0.9s cubic-bezier(0.62, 0.05, 0.25, 1) both;
+  animation: theme-reveal 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-/* 揭示过程中旧主题变暗并去饱和，以增强层次感 */
+/* 旧主题轻微淡出，避免长时间压暗 */
 @keyframes theme-dim {
-  to { opacity: 0.45; filter: saturate(0.6); }
+  to { opacity: 0.7; }
 }
 /* 新主题以圆形扩散展开，同时从轻微放大回落到常态 */
 @keyframes theme-reveal {
   from {
     clip-path: circle(0px at var(--vt-x, 100%) var(--vt-y, 0%));
-    transform: scale(1.06);
+    transform: scale(1.02);
   }
   to {
     clip-path: circle(140% at var(--vt-x, 100%) var(--vt-y, 0%));

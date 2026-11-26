@@ -33,6 +33,17 @@ CREATE TABLE IF NOT EXISTS todos (
     INDEX idx_todos_completed (completed)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS user_ai_configs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL UNIQUE,
+    base_url VARCHAR(255),
+    api_key_encrypted TEXT,
+    chat_model VARCHAR(100),
+    embed_model VARCHAR(100),
+    updated_at DATETIME NOT NULL,
+    CONSTRAINT fk_ai_config_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS pomodoro_sessions (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,

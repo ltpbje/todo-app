@@ -1,6 +1,6 @@
 <template>
   <div ref="root" class="date-picker">
-    <button ref="trigger" type="button" class="date-trigger glass-input" :aria-label="label" @click="toggle">
+    <button ref="trigger" type="button" class="date-trigger glass-input" :aria-label="label" :aria-expanded="open" @click="toggle">
       <span :class="{ placeholder: !modelValue }">{{ display }}</span>
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" />
@@ -136,6 +136,8 @@ onUnmounted(() => {
   border-radius: var(--glass-radius-sm);
   background: #fafaff;
   box-shadow: 0 18px 44px rgba(40, 34, 90, 0.28), 0 2px 8px rgba(40, 34, 90, 0.12);
+  transform-origin: top left;
+  animation: pop-in 0.2s var(--liquid-ease) both;
 }
 html.dark .date-pop {
   border-color: rgba(255, 255, 255, 0.14);
@@ -159,11 +161,13 @@ html.dark .date-pop {
 .dp-day:hover { background: var(--glass-bg-hover); }
 .dp-day.other { opacity: 0.3; }
 .dp-day.today { border-color: var(--accent); }
-.dp-day.selected { background: var(--accent-grad); color: #fff; border-color: transparent; }
+.dp-day.selected { background: var(--accent-grad); color: #fff; border-color: transparent; box-shadow: 0 3px 10px rgba(110, 120, 255, 0.28); animation: day-pick 0.22s var(--liquid-ease); }
 .dp-foot { display: flex; gap: 6px; margin-top: 10px; }
 .dp-foot button {
   flex: 1; padding: 6px 0; border: 1px solid var(--glass-border); border-radius: 8px;
   background: var(--glass-bg); color: var(--text-secondary); cursor: pointer; font-size: 12px;
 }
 .dp-foot button:hover { color: var(--accent); border-color: var(--accent); }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-5px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes day-pick { from { transform: scale(0.82); } to { transform: scale(1); } }
 </style>

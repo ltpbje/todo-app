@@ -13,26 +13,40 @@
               {{ adding ? '添加中' : '添加' }}
             </button>
           </div>
+          <transition name="collapse">
           <div v-if="showOptions" class="add-meta">
             <input v-model.trim="newCategory" class="glass-input" list="category-options" placeholder="清单（默认）" aria-label="清单" />
             <datalist id="category-options"><option v-for="c in categories" :key="c" :value="c" /></datalist>
             <SelectPicker v-model="newPriority" :options="priorityOptions" label="优先级" class="meta-select" />
             <SelectPicker v-model="newRepeat" :options="repeatOptions" label="重复" class="meta-select" />
           </div>
+          </transition>
         </form>
 
         <div class="ai-bar">
           <button class="glass-pill" :class="{ active: aiPanel }" @click="aiPanel = !aiPanel">✨ AI 添加</button>
+          <button
+            type="button"
+            class="search-mode"
+            :class="{ active: aiSearch }"
+            role="switch"
+            :aria-checked="aiSearch"
+            title="开启后使用 AI 语义搜索；关闭时为本地关键词搜索"
+            @click="toggleAiSearch"
+          >
+            <span class="knob"></span>AI 搜索
+          </button>
           <input
             v-model.trim="searchQ"
             class="glass-input search-input"
-            placeholder="搜索任务（回车，AI 语义搜索）"
+            :placeholder="aiSearch ? 'AI 语义搜索，回车确认…' : '搜索任务，回车确认…'"
             @keyup.enter="doSearch"
             @input="onSearchInput"
           />
           <button v-if="searchResults" class="glass-pill" @click="clearSearch">清除搜索</button>
         </div>
 
+        <transition name="collapse">
         <div v-if="aiPanel" class="ai-panel">
           <textarea
             v-model.trim="nlText"
@@ -57,6 +71,7 @@
             </button>
           </div>
         </div>
+        </transition>
 
         <div class="filters">
           <button
@@ -77,7 +92,8 @@
             <span>{{ todayDone }}/6 · {{ ivyOpen ? '收起' : '展开' }}</span>
           </button>
           <div class="ivy-progress"><i :style="{ width: Math.min(todayDone / 6 * 100, 100) + '%' }"></i></div>
-          <template v-if="ivyOpen">
+          <transition name="collapse">
+          <div v-if="ivyOpen" class="ivy-body">
             <ol v-if="todayTasks.length">
               <li v-for="(t, i) in todayTasks.slice(0, 6)" :key="t.id" :class="{ done: t.completed }">
                 <span class="ivy-no">{{ i + 1 }}</span>{{ t.title }}
@@ -85,26 +101,28 @@
             </ol>
             <p v-else class="ivy-empty">按重要性拖动排序，先完成前六件</p>
             <p v-if="todayTasks.length > 6" class="ivy-warn">今天超过 6 件，先专注前六件，其余安排到明天</p>
-          </template>
+          </div>
+          </transition>
         </div>
 
         <p v-if="error" class="error">{{ error }}</p>
         <p v-if="!loading && !filtered.length" class="empty">
-          {{ view === 'all' ? '还没有任务，添加一个吧' : view === 'today' ? '今天还没有任务，添加一个或到「全部」里安排' : '这个分类下暂无任务' }}
+          {{ searchResults ? '没有匹配的任务' : view === 'all' ? '还没有任务，添加一个吧' : view === 'today' ? '今天还没有任务，添加一个或到「全部」里安排' : '这个分类下暂无任务' }}
         </p>
 
         <transition-group name="list" tag="ul" class="todo-list">
           <li
             v-for="todo in filtered"
             :key="todo.id"
-            :class="{ done: todo.completed, dragging: dragId === todo.id }"
+            :class="{ done: todo.completed, dragging: dragId === todo.id, 'just-completed': todo.id === completedId, 'new-item': newIds.has(todo.id), 'drag-target': dropTargetId === todo.id }"
             :draggable="!searchResults"
             @dragstart="onDragStart(todo, $event)"
             @dragover="onDragOver($event)"
+            @dragenter="onDragEnter(todo)"
             @drop="onDrop(todo, $event)"
-            @dragend="dragId = null"
+            @dragend="onDragEnd"
           >
-            <button class="check" :title="todo.completed ? '标记为未完成' : '标记为完成'" @click="toggle(todo)">
+            <button class="check" :disabled="updatingId === todo.id" :title="todo.completed ? '标记为未完成' : '标记为完成'" @click="toggle(todo)">
               <svg v-if="todo.completed" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
             </button>
             <span v-if="editingId !== todo.id" class="title" @dblclick="startEdit(todo)">{{ todo.title }}</span>
@@ -188,11 +206,26 @@ const dateFilter = ref(null)
 const dragId = ref(null)
 const notifiedIds = new Set()
 
+const newIds = ref(new Set())
+const completedId = ref(null)
+let newIdTimer = null
+let completedTimer = null
+
 function onDetailSaved(data) {
   const idx = todos.value.findIndex(t => t.id === data.id)
   if (idx !== -1) Object.assign(todos.value[idx], data)
 }
-function onSavedList(list) { todos.value.unshift(...list) }
+function onSavedList(list) {
+  markNew(list.map(t => t.id))
+  todos.value.unshift(...list)
+}
+
+function markNew(ids) {
+  if (!ids.length) return
+  ids.forEach(id => newIds.value.add(id))
+  clearTimeout(newIdTimer)
+  newIdTimer = setTimeout(() => { newIds.value.clear() }, 500)
+}
 
 // --- AI：自然语言添加 ---
 const aiPanel = ref(false)
@@ -226,6 +259,7 @@ async function addParsed() {
       completed: false
     }))
     const { data } = await api.post('/todos/batch', items)
+    markNew(data.map(t => t.id))
     todos.value.unshift(...data)
     parsed.value = []
     nlText.value = ''
@@ -240,9 +274,21 @@ async function addParsed() {
 const searchQ = ref('')
 const searchResults = ref(null)
 const searching = ref(false)
+const aiSearch = ref(false)
+
+function toggleAiSearch() {
+  aiSearch.value = !aiSearch.value
+  if (searchQ.value) doSearch()
+}
 
 async function doSearch() {
   if (!searchQ.value) { searchResults.value = null; return }
+  if (!aiSearch.value) {
+    const q = searchQ.value.toLowerCase()
+    searchResults.value = todos.value.filter(t =>
+      `${t.title} ${t.description || ''}`.toLowerCase().includes(q))
+    return
+  }
   searching.value = true
   try {
     searchResults.value = await aiPost('/ai/search', { q: searchQ.value })
@@ -258,6 +304,7 @@ const newTitle = ref('')
 const loading = ref(true)
 const adding = ref(false)
 const deletingId = ref(null)
+const updatingId = ref(null)
 const error = ref('')
 const editingId = ref(null)
 const editTitle = ref('')
@@ -313,8 +360,18 @@ function onDragStart(todo, e) {
   e.dataTransfer.setData('text/plain', String(todo.id))
 }
 function onDragOver(e) { if (dragId.value) e.preventDefault() }
+function onDragEnd() {
+  dragId.value = null
+  dropTargetId.value = null
+}
+const dropTargetId = ref(null)
+function onDragEnter(todo) {
+  if (!dragId.value || dragId.value === todo.id) return
+  dropTargetId.value = todo.id
+}
 async function onDrop(target, e) {
   e.preventDefault()
+  dropTargetId.value = null
   const id = dragId.value || Number(e.dataTransfer.getData('text/plain'))
   dragId.value = null
   if (!id || id === target.id) return
@@ -366,6 +423,7 @@ async function add() {
       repeatRule: newRepeat.value,
       completed: false
     })
+    markNew([data.id])
     todos.value.unshift(data)
     newTitle.value = ''
   } catch (e) {
@@ -376,12 +434,22 @@ async function add() {
 }
 
 async function toggle(todo) {
+  if (updatingId.value === todo.id) return
+  const completing = !todo.completed
+  updatingId.value = todo.id
   try {
-    const { data } = await api.put(`/todos/${todo.id}`, { ...todo, completed: !todo.completed })
+    const { data } = await api.put(`/todos/${todo.id}`, { ...todo, completed: completing })
     Object.assign(todo, data)
+    if (completing) {
+      completedId.value = todo.id
+      clearTimeout(completedTimer)
+      completedTimer = setTimeout(() => { completedId.value = null }, 650)
+    }
     if (data.repeatRule && data.repeatRule !== 'none' && data.completed) await load()
   } catch (e) {
     error.value = '更新失败'
+  } finally {
+    updatingId.value = null
   }
 }
 
@@ -429,7 +497,11 @@ onMounted(() => {
   load()
   reminderTimer = setInterval(checkReminders, 30000)
 })
-onUnmounted(() => clearInterval(reminderTimer))
+onUnmounted(() => {
+  clearInterval(reminderTimer)
+  clearTimeout(newIdTimer)
+  clearTimeout(completedTimer)
+})
 </script>
 
 <style scoped>
@@ -479,7 +551,7 @@ onUnmounted(() => clearInterval(reminderTimer))
 .ivy-head strong { color: var(--text-primary); font-size: 14px; }
 .ivy-head span { font-size: 12px; color: var(--accent); }
 .ivy-progress { height: 4px; border-radius: 999px; background: var(--glass-bg-strong); overflow: hidden; margin-top: 8px; }
-.ivy-progress i { display: block; height: 100%; border-radius: 999px; background: var(--accent-grad); }
+.ivy-progress i { display: block; height: 100%; border-radius: 999px; background: var(--accent-grad); transition: width 0.2s var(--liquid-ease); }
 .ivy ol { margin: 10px 0 0; padding-left: 4px; list-style: none; }
 .ivy li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-primary); padding: 3px 0; }
 .ivy li.done { text-decoration: line-through; color: var(--text-secondary); }
@@ -487,8 +559,19 @@ onUnmounted(() => clearInterval(reminderTimer))
 .ivy-empty, .ivy-warn { margin: 4px 0 0; font-size: 12px; color: var(--text-secondary); }
 .ivy-warn { color: var(--danger); }
 
-.ai-bar { display: flex; gap: 8px; margin-bottom: 16px; position: relative; }
-.ai-bar .search-input { flex: 1; padding: 8px 12px; }
+.ai-bar { display: flex; gap: 8px; margin-bottom: 16px; position: relative; align-items: center; flex-wrap: wrap; }
+.ai-bar .search-input { flex: 1; min-width: 140px; padding: 8px 12px; }
+.search-mode {
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  padding: 6px 10px; border: 1px solid var(--glass-border); border-radius: 999px;
+  background: var(--glass-bg-strong); color: var(--text-secondary);
+  font-size: 12px; cursor: pointer; transition: color .2s, background .2s;
+}
+.search-mode.active { color: #fff; background: var(--accent-grad); border-color: transparent; }
+.search-mode .knob { width: 22px; height: 12px; border-radius: 999px; background: var(--glass-bg-hover); position: relative; transition: background .2s; }
+.search-mode .knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--text-secondary); transition: transform .2s, background .2s; }
+.search-mode.active .knob { background: rgba(255,255,255,.3); }
+.search-mode.active .knob::after { transform: translateX(10px); background: #fff; }
 
 .ai-panel {
   border: 1px solid var(--glass-border);
@@ -519,6 +602,7 @@ onUnmounted(() => clearInterval(reminderTimer))
 .todo-list li:last-child { border-bottom: none; }
 .todo-list li[draggable="true"] { cursor: grab; }
 .todo-list li.dragging { opacity: 0.4; }
+.todo-list li.drag-target { background: var(--glass-bg-hover); box-shadow: inset 3px 0 0 var(--accent); }
 .due-chip, .pomodoro-chip, .cat-chip, .pri-chip, .sub-chip, .repeat-chip {
   flex-shrink: 0;
   font-size: 11px;
@@ -531,6 +615,8 @@ onUnmounted(() => clearInterval(reminderTimer))
 .pri-chip.p2 { background: rgba(224, 52, 75, 0.16); color: var(--danger); }
 
 .check {
+  position: relative;
+  overflow: visible;
   width: 24px;
   height: 24px;
   flex-shrink: 0;
@@ -543,15 +629,29 @@ onUnmounted(() => clearInterval(reminderTimer))
   justify-content: center;
   color: #fff;
   padding: 0;
-  transition: all 0.2s;
+  transition: color 0.12s, background 0.12s, border-color 0.12s, box-shadow 0.12s, transform 0.14s var(--liquid-ease);
 }
+.check:hover:not(:disabled) { transform: scale(1.08); }
+.check:disabled { cursor: wait; opacity: 0.75; }
+.check:active { transform: scale(0.94); }
+.check svg { animation: check-draw 0.16s ease-out both; }
+.check::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+li.just-completed .check::after { animation: check-ring 0.28s ease-out; }
 li.done .check {
   background: var(--accent-grad);
   border-color: transparent;
   box-shadow: 0 3px 10px rgba(110, 120, 255, 0.4);
 }
 
-.title { flex: 1; cursor: pointer; font-size: 15px; color: var(--text-primary); word-break: break-all; transition: color 0.25s; }
+.title { flex: 1; cursor: pointer; font-size: 15px; color: var(--text-primary); word-break: break-all; transition: color 0.15s; }
 li.done .title { text-decoration: line-through; color: var(--text-secondary); }
 
 .edit { flex: 1; padding: 8px 10px; }
@@ -565,7 +665,7 @@ li.done .title { text-decoration: line-through; color: var(--text-secondary); }
   padding: 6px;
   cursor: pointer;
   display: flex;
-  transition: color 0.2s, background 0.2s;
+  transition: color 0.14s, background 0.14s;
 }
 .todo-list li:hover .del { color: var(--danger); opacity: 1; }
 .del:hover { background: rgba(224, 52, 75, 0.12); }
@@ -574,10 +674,19 @@ li.done .title { text-decoration: line-through; color: var(--text-secondary); }
 .empty { color: var(--text-secondary); text-align: center; padding: 32px 0 16px; margin: 0; font-size: 14px; position: relative; }
 
 /* 特异性高于 `.todo-list li`（后者设置了 `transition: background`） */
-.todo-list li.list-enter-active, .todo-list li.list-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
-.list-enter-from, .list-leave-to { opacity: 0; transform: translateX(-12px); }
-.list-leave-active { position: absolute; width: 100%; }
-.list-move { transition: transform 0.25s ease; }
+.todo-list li.list-enter-active, .todo-list li.list-leave-active { transition: opacity 0.16s ease, transform 0.18s var(--liquid-ease); }
+.todo-list li.list-enter-from { opacity: 0; transform: translateY(6px); }
+.todo-list li.list-enter-to { opacity: 1; transform: translateY(0); }
+.todo-list li.list-leave-to { opacity: 0; transform: translateX(8px); }
+.todo-list li.list-leave-active { position: absolute; width: 100%; }
+.list-move { transition: transform 0.18s var(--liquid-ease); }
+.todo-list li.new-item .title { animation: new-title 0.18s ease-out both; }
+
+.collapse-enter-active, .collapse-leave-active { transition: none; }
+
+@keyframes check-draw { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: scale(1); } }
+@keyframes check-ring { 0% { opacity: 0.65; transform: scale(0.75); } 100% { opacity: 0; transform: scale(1.55); } }
+@keyframes new-title { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 600px) {
   .due-input { flex-basis: 130px; }

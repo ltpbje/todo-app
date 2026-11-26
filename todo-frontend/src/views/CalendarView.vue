@@ -10,7 +10,7 @@
             <button class="glass-button" aria-label="下个月" @click="shiftMonth(1)">›</button>
           </div>
           <div class="cal-week-row"><span v-for="w in weekdays" :key="w">{{ w }}</span></div>
-          <div class="cal-grid">
+          <div class="cal-grid" :class="slideDirection" :key="monthKey">
             <button
               v-for="cell in cells"
               :key="cell"
@@ -30,12 +30,14 @@
             <button class="glass-button accent" @click="openInList">在清单中查看</button>
           </div>
           <p v-if="!selectedTasks.length" class="empty">这一天还没有安排任务</p>
-          <ul v-else class="day-list">
+          <transition name="day-list" mode="out-in">
+          <ul v-if="selectedTasks.length" :key="selectedDay" class="day-list">
             <li v-for="t in selectedTasks" :key="t.id" :class="{ done: t.completed }">
               <span>{{ t.title }}</span>
               <span class="tag" v-if="t.category">{{ t.category }}</span>
             </li>
           </ul>
+          </transition>
         </div>
       </GlassObject>
     </div>
@@ -55,6 +57,7 @@ const selectedDay = ref(dateKey(0))
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 const year = ref(Number(dateKey(0).slice(0, 4)))
 const month = ref(Number(dateKey(0).slice(5, 7)) - 1)
+const slideDirection = ref('slide-next')
 
 const monthKey = computed(() => `${year.value}-${String(month.value + 1).padStart(2, '0')}`)
 const label = computed(() => `${year.value}年${month.value + 1}月`)
@@ -65,6 +68,7 @@ const dueCounts = computed(() => todos.value
 const selectedTasks = computed(() => todos.value.filter(t => !t.parentId && t.dueDate === selectedDay.value))
 
 function shiftMonth(delta) {
+  slideDirection.value = delta > 0 ? 'slide-next' : 'slide-prev'
   const d = new Date(year.value, month.value + delta, 1)
   year.value = d.getFullYear()
   month.value = d.getMonth()
@@ -88,13 +92,17 @@ onMounted(async () => {
 .cal-head strong { color: var(--text-primary); }
 .cal-head .glass-button { padding: 4px 14px; }
 .cal-week-row, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; position: relative; }
+.slide-next { animation: slide-next 0.28s var(--liquid-ease); }
+.slide-prev { animation: slide-prev 0.28s var(--liquid-ease); }
+@keyframes slide-next { from { opacity: 0.3; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slide-prev { from { opacity: 0.3; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
 .cal-week-row { margin-bottom: 4px; }
 .cal-week-row span { text-align: center; font-size: 11px; color: var(--text-secondary); }
 .cal-day { position: relative; aspect-ratio: 1; border: 1px solid transparent; border-radius: 10px; background: var(--glass-bg-strong); color: var(--text-primary); cursor: pointer; font-size: 12px; }
 .cal-day:hover { background: var(--glass-bg-hover); }
 .cal-day.other { opacity: 0.32; }
 .cal-day.today { border-color: var(--accent); }
-.cal-day.selected { background: var(--accent-grad); color: #fff; }
+.cal-day.selected { background: var(--accent-grad); color: #fff; animation: day-pick 0.22s var(--liquid-ease); }
 .cal-day i { position: absolute; right: 4px; top: 3px; font-size: 9px; font-style: normal; color: var(--accent); }
 .cal-day.selected i { color: #fff; }
 
@@ -105,6 +113,9 @@ onMounted(async () => {
 .day-list { list-style: none; margin: 0; padding: 0; }
 .day-list li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; font-size: 13px; color: var(--text-primary); }
 .day-list li:nth-child(odd) { background: var(--glass-bg); }
+.day-list-enter-active, .day-list-leave-active { transition: opacity 0.15s ease, transform 0.2s var(--liquid-ease); }
+.day-list-enter-from, .day-list-leave-to { opacity: 0; transform: translateY(5px); }
+@keyframes day-pick { from { transform: scale(0.82); } to { transform: scale(1); } }
 .day-list li.done span:first-child { text-decoration: line-through; color: var(--text-secondary); }
 .day-list .tag { font-size: 11px; color: var(--accent); }
 .empty { text-align: center; color: var(--text-secondary); font-size: 13px; padding: 14px 0; margin: 0; }

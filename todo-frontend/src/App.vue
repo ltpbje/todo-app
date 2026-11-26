@@ -1,6 +1,6 @@
 <template>
   <div class="molten-bg" aria-hidden="true">
-    <MoltenMetal :speed="0.3" :mouse-strength="0.25" :scale="6.5" />
+    <MoltenMetal :speed="0.3" :mouse-strength="0.25" :scale="6.5" :detail="2" />
   </div>
 
   <header v-if="route.path !== '/login'" class="app-topbar glass-panel" v-glass-glow>
@@ -10,6 +10,7 @@
       <router-link to="/" class="nav-link">清单</router-link>
       <router-link to="/calendar" class="nav-link">日历</router-link>
       <router-link to="/stats" class="nav-link">统计</router-link>
+      <router-link to="/settings" class="nav-link">设置</router-link>
     </nav>
 
     <div class="top-actions">

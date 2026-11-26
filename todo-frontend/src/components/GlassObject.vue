@@ -1,5 +1,5 @@
 <template>
-  <div ref="host" class="glass-object is-resting" @mousemove="onMove" @mouseleave="onLeave">
+  <div ref="host" class="glass-object is-resting" :class="{ 'tilt-on': tiltEnabled }" @mousemove="onMove" @mouseleave="onLeave">
     <span class="glass-box" aria-hidden="true"></span>
     <div class="glass-content"><slot /></div>
   </div>
@@ -10,19 +10,30 @@ import { ref, watch } from 'vue'
 import { tiltEnabled } from '../utils/glassTilt'
 
 const host = ref(null)
+let raf = 0
+let mouseX = 0
+let mouseY = 0
 
 function onMove(e) {
   if (!tiltEnabled.value) return
-  const el = host.value
-  el.classList.remove('is-resting')
-  const r = el.getBoundingClientRect()
-  const nx = (e.clientX - r.left) / r.width * 2 - 1
-  const ny = (e.clientY - r.top) / r.height * 2 - 1
-  el.style.setProperty('--rx', `${(-ny * 6).toFixed(2)}deg`)
-  el.style.setProperty('--ry', `${(nx * 8).toFixed(2)}deg`)
+  mouseX = e.clientX
+  mouseY = e.clientY
+  if (raf) return
+  raf = requestAnimationFrame(() => {
+    raf = 0
+    const el = host.value
+    if (!el) return
+    el.classList.remove('is-resting')
+    const r = el.getBoundingClientRect()
+    const nx = (mouseX - r.left) / r.width * 2 - 1
+    const ny = (mouseY - r.top) / r.height * 2 - 1
+    el.style.setProperty('--rx', `${(-ny * 3).toFixed(2)}deg`)
+    el.style.setProperty('--ry', `${(nx * 4).toFixed(2)}deg`)
+  })
 }
 
 function onLeave() {
+  if (raf) { cancelAnimationFrame(raf); raf = 0 }
   const el = host.value
   el.classList.add('is-resting')
   el.style.setProperty('--rx', '0deg')
@@ -53,14 +64,14 @@ watch(tiltEnabled, (enabled) => {
 .glass-object.glass-card:hover { box-shadow: none; }
 .glass-object.glass-card::before { display: none; }
 
-.glass-box,
-.glass-content {
+.glass-object.tilt-on .glass-box,
+.glass-object.tilt-on .glass-content {
   transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
   transform-style: preserve-3d;
 }
-.glass-object.is-resting .glass-box,
-.glass-object.is-resting .glass-content {
-  transition: transform 2.4s cubic-bezier(0.22, 1, 0.36, 1);
+.glass-object.tilt-on.is-resting .glass-box,
+.glass-object.tilt-on.is-resting .glass-content {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .glass-box {
   position: absolute;
@@ -83,8 +94,6 @@ watch(tiltEnabled, (enabled) => {
     rgba(255, 255, 255, 0) 45%,
     rgba(255, 255, 255, 0.025) 100%
   );
-  -webkit-backdrop-filter: blur(2px) saturate(180%);
-  backdrop-filter: blur(2px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.5);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.75),

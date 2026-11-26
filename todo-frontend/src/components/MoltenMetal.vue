@@ -239,36 +239,19 @@ onMounted(() => {
   ro.observe(container)
   setSize()
 
-  const targetMouse = [0.5, 0.5]
-  const currentMouse = [0.5, 0.5]
-
-  // 在 window 上监听，这样即使 canvas 位于页面内容之后
-  // （pointer-events: none）也能响应漂移
-  const handleMouseMove = (e) => {
-    const rect = canvas.getBoundingClientRect()
-    targetMouse[0] = (e.clientX - rect.left) / rect.width
-    targetMouse[1] = 1.0 - (e.clientY - rect.top) / rect.height
-  }
-  window.addEventListener('mousemove', handleMouseMove)
-
   let raf = 0
   let isVisible = true
   let isPageVisible = !document.hidden
-  const t0 = performance.now()
 
-  const loop = (t) => {
-    program.iTime.value = (t - t0) * 0.001
-    currentMouse[0] += 0.05 * (targetMouse[0] - currentMouse[0])
-    currentMouse[1] += 0.05 * (targetMouse[1] - currentMouse[1])
-    const m = program.uMouse.value
-    m[0] = currentMouse[0]
-    m[1] = currentMouse[1]
+  // ponytail: 背景只渲染一帧静态纹理，不再逐帧占用 GPU；交互反馈优先
+  const renderOnce = () => {
+    raf = 0
+    program.iTime.value = 1.5
     renderer.render({ scene: mesh })
-    raf = requestAnimationFrame(loop)
   }
 
   const tryStart = () => {
-    if (isVisible && isPageVisible && raf === 0) raf = requestAnimationFrame(loop)
+    if (isVisible && isPageVisible && raf === 0) raf = requestAnimationFrame(renderOnce)
   }
   const tryStop = () => {
     if (raf !== 0) {
@@ -302,7 +285,6 @@ onMounted(() => {
     ro.disconnect()
     io.disconnect()
     document.removeEventListener('visibilitychange', onVisibility)
-    window.removeEventListener('mousemove', handleMouseMove)
     program = null
     try {
       container.removeChild(canvas)

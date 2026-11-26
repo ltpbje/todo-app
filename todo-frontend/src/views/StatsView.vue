@@ -4,17 +4,17 @@
       <GlassObject class="glass-card" v-glass-glow>
         <div class="glare glass-glare"></div>
         <div class="stat-grid">
-          <div><strong>{{ todayDone }}</strong><span>今日完成</span></div>
-          <div><strong>{{ yesterdayDone }}</strong><span>昨日完成</span></div>
-          <div><strong>{{ weekDone }}</strong><span>近 7 天</span></div>
-          <div><strong>{{ pomodoroMinutes }}</strong><span>番茄分钟</span></div>
+          <div><strong :key="todayDone">{{ todayDone }}</strong><span>今日完成</span></div>
+          <div><strong :key="yesterdayDone">{{ yesterdayDone }}</strong><span>昨日完成</span></div>
+          <div><strong :key="weekDone">{{ weekDone }}</strong><span>近 7 天</span></div>
+          <div><strong :key="pomodoroMinutes">{{ pomodoroMinutes }}</strong><span>番茄分钟</span></div>
         </div>
 
         <section class="panel">
           <h3>近 7 天番茄</h3>
           <div class="pomo-chart">
             <div v-for="d in pomodoroTrend" :key="d.key" class="pomo-bar">
-              <div class="bar-track"><div class="bar-fill" :style="{ height: Math.min(d.count * 14, 70) + 'px' }"></div></div>
+              <div class="bar-track"><div class="bar-fill" :style="{ height: Math.min(d.count * 14, 70) + 'px' }" :key="d.count"></div></div>
               <span>{{ d.label }}</span>
             </div>
           </div>
@@ -34,7 +34,7 @@
           <div v-else class="category-list">
             <div v-for="c in categoryStats" :key="c.name" class="category-row">
               <span>{{ c.name }}</span>
-              <div class="track"><div class="fill" :style="{ width: c.percent + '%' }"></div></div>
+              <div class="track"><div class="fill" :style="{ width: c.percent + '%' }" :key="c.percent"></div></div>
               <b>{{ c.count }}</b>
             </div>
           </div>
@@ -92,7 +92,7 @@ onMounted(async () => {
 
 .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; position: relative; }
 .stat-grid div { display: flex; flex-direction: column; gap: 2px; }
-.stat-grid strong { font-size: 24px; color: var(--accent); }
+.stat-grid strong { font-size: 24px; color: var(--accent); animation: number-pop 0.35s var(--liquid-ease); }
 .stat-grid span { font-size: 12px; color: var(--text-secondary); }
 
 .panel { margin-top: 22px; border-top: 1px solid var(--glass-border); padding-top: 16px; position: relative; }
@@ -100,7 +100,7 @@ onMounted(async () => {
 .pomo-chart { display: flex; justify-content: space-between; gap: 4px; }
 .pomo-bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .bar-track { width: 100%; height: 70px; display: flex; align-items: flex-end; justify-content: center; }
-.bar-fill { width: 60%; min-height: 3px; border-radius: 6px 6px 0 0; background: var(--accent-grad); }
+.bar-fill { width: 60%; min-height: 3px; border-radius: 6px 6px 0 0; background: var(--accent-grad); transform-origin: bottom; animation: bar-grow 0.55s var(--liquid-ease); }
 .pomo-bar span { font-size: 10px; color: var(--text-secondary); }
 
 .review-list { list-style: none; margin: 0; padding: 0; }
@@ -109,8 +109,10 @@ onMounted(async () => {
 .category-list { display: flex; flex-direction: column; gap: 8px; }
 .category-row { display: grid; grid-template-columns: 90px 1fr 24px; align-items: center; gap: 10px; font-size: 12px; color: var(--text-primary); }
 .category-row .track { height: 8px; border-radius: 999px; background: var(--glass-bg-strong); overflow: hidden; }
-.category-row .fill { height: 100%; border-radius: 999px; background: var(--accent-grad); }
+.category-row .fill { height: 100%; border-radius: 999px; background: var(--accent-grad); transform-origin: left; }
 .category-row b { color: var(--accent); text-align: right; }
+@keyframes number-pop { from { opacity: 0.5; transform: translateY(4px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes bar-grow { from { transform: scaleY(0); opacity: 0.5; } to { transform: scaleY(1); opacity: 1; } }
 .empty { text-align: center; color: var(--text-secondary); font-size: 13px; padding: 14px 0; margin: 0; }
 @media (max-width: 600px) {
   .stat-grid { grid-template-columns: repeat(2, 1fr); row-gap: 12px; }
